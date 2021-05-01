@@ -63,7 +63,7 @@ impl baseplug::PluginUI for ParametricEQ {
     type Handle = Producer<ui::UIHandleMsg>;
 
     fn ui_size() -> (i16, i16) {
-        (230, 130)
+        (800, 600)
     }
 
     fn ui_open(parent: &impl HasRawWindowHandle) -> WindowOpenResult<Self::Handle> {

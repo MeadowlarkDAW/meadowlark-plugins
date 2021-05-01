@@ -13,7 +13,8 @@ crate-type = ["cdylib"]
 [dependencies]
 baseplug = { git = "https://github.com/wrl/baseplug.git", branch="trunk" }
 baseview = { git = "https://github.com/RustAudio/baseview.git", branch="master" }
-tuix = { git = "https://github.com/geom3trik/tuix.git", branch="main", default-features = false, features = ["baseview"] }
+tuix = { git = "https://github.com/geom3trik/tuix.git", branch="experiment", default-features = false, features = ["baseview"] }
+femtovg = {git = "https://github.com/femtovg/femtovg", branch = "master"}
 serde = { version = "1.0", features = ["derive"] }
 raw-window-handle = "0.3"
 rtrb = "0.1"
