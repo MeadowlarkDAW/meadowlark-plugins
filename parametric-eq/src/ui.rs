@@ -1,6 +1,4 @@
-use super::ParametricEQ;
-
-use rtrb::{RingBuffer, Consumer, Producer};
+use rtrb::Consumer;
 use raw_window_handle::HasRawWindowHandle;
 
 use tuix::*;
@@ -25,5 +23,5 @@ pub fn build_and_run(handle_msg_rx: Consumer<UIHandleMsg>, parent_window: &impl 
         win_desc.with_title("Hello GUI")
     });
 
-    app.run();
+    app.open_parented(parent_window);
 }
