@@ -1,0 +1,19 @@
+[package]
+name = "parametric-eq"
+version = "0.1.0"
+authors = ["Billy Messenger <BillyDM@tutamail.com>"]
+edition = "2018"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+baseplug = { git = "https://github.com/wrl/baseplug.git", branch="trunk" }
+baseview = { git = "https://github.com/RustAudio/baseview.git", branch="master" }
+tuix = { git = "https://github.com/geom3trik/tuix.git", branch="main", default-features = false, features = ["baseview"] }
+serde = { version = "1.0", features = ["derive"] }
+raw-window-handle = "0.3"
+rtrb = "0.1"
