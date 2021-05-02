@@ -1,19 +1,30 @@
 
 
-
+use rtrb::{Consumer, Producer};
+use triple_buffer::{Input, Output, TripleBuffer};
+use atomic_refcell::AtomicRefCell;
 use tuix::*;
 use femtovg::{renderer::OpenGl, Path, Paint, Align, Baseline, Canvas};
+use rustfft::{Fft, FftPlanner, num_complex::Complex, num_traits::real};
+
+use std::{cell::UnsafeCell, sync::Arc};
+use std::cmp::Ordering;
 
 const frequencies: [f32; 27] = [1.477121, 1.60206, 1.69897, 1.778151, 1.845098, 1.90309, 1.954243, 2.0, 2.30103, 2.477121, 2.60206, 2.69897, 2.778151, 2.845098, 2.90309, 2.954243, 3.0, 3.30103, 3.477121, 3.60206, 3.69897, 3.778151, 3.845098, 3.90309, 3.954243, 4.0, 4.30103];
 
 pub struct Graph {
-
+    pub consumer: Arc<AtomicRefCell<Output<Vec<f32>>>>,
+    prev_frame: Vec<f32>,
 }
 
 impl Graph {
-    pub fn new() -> Self {
-        Self {
+    pub fn new(consumer: Arc<AtomicRefCell<Output<Vec<f32>>>>,) -> Self {
+        
 
+        
+        Self {
+            consumer,
+            prev_frame: vec![0.0f32; 2048],
         }
     }
 }
@@ -320,6 +331,51 @@ impl Widget for Graph {
         label_paint.set_text_baseline(Baseline::Middle);
         label_paint.set_font_size(12.0);
         canvas.fill_text(posx + 20.0, posy + height - 40.0 - t, "12 dB", label_paint);
+
+
+        // Draw Spectrum
+
+        let mut path = Path::new();
+        path.move_to(posx + 40.5, posy + height);
+
+        let mut consumer = self.consumer.borrow_mut();
+
+        consumer.update();
+
+        let output = consumer.output_buffer();
+
+        let mut planner = FftPlanner::new();
+        let fft = planner.plan_fft_forward(4096);
+
+        let mut buffer = vec![Complex{re: 0.0f32, im: 0.0f32}; 4096];
+
+        for (elem, sample) in buffer.iter_mut().zip(output.iter()) {
+            *elem = Complex{re: *sample, im: 0.0f32};
+        }
+
+        fft.process(&mut buffer);
+
+        let scale = 64.0; //sqrt(4096)
+        let real_buffer = buffer.into_iter().map(|sample| sample.norm()).collect::<Vec<f32>>();
+        //let maximum = real_buffer.iter().max_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Equal)).unwrap_or(&32.0);
+
+        let mut alpha = (-2.0f32).exp();
+
+        for i in 0..real_buffer.len() / 2 {
+            let mut f = (i as f32) * (22500.0 / 2048.0);
+            f = f.log10();
+            let t = (f - min) * (width - 80.0) / range;
+            let sample = real_buffer[i] * alpha + self.prev_frame[i] * (1.0 - alpha);
+            let db_val = 1.0 + (10.0 * (sample/scale).log10()).max(-100.0) / 100.0;
+            path.line_to(posx + 40.5 + t as f32, posy + height + 30.0 - (db_val * height));
+            self.prev_frame[i] = sample;
+        }
+
+        let mut paint = Paint::color(femtovg::Color::rgb(200, 50, 50));
+        paint.set_line_join(femtovg::LineJoin::Bevel);
+
+
+        canvas.stroke_path(&mut path, paint);
 
     
     }

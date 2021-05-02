@@ -1,7 +1,7 @@
 [package]
 name = "parametric-eq"
 version = "0.1.0"
-authors = ["Billy Messenger <BillyDM@tutamail.com>"]
+authors = ["Billy Messenger <BillyDM@tutamail.com>","George Atkinson <geomyles@yahoo.co.uk>"]
 edition = "2018"
 publish = false
 
@@ -11,10 +11,14 @@ crate-type = ["cdylib"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-baseplug = { git = "https://github.com/wrl/baseplug.git", branch="trunk" }
+# baseplug = { git = "https://github.com/wrl/baseplug.git", branch="trunk" }
+baseplug = { git = "https://github.com/WeirdConstructor/baseplug", branch = "plugin_context"}
 baseview = { git = "https://github.com/RustAudio/baseview.git", branch="master" }
 tuix = { git = "https://github.com/geom3trik/tuix.git", branch="experiment", default-features = false, features = ["baseview"] }
 femtovg = {git = "https://github.com/femtovg/femtovg", branch = "master"}
 serde = { version = "1.0", features = ["derive"] }
 raw-window-handle = "0.3"
 rtrb = "0.1"
+triple_buffer = "5.0.6"
+atomic_refcell = "0.1.7"
+rustfft = "6.0.0"
