@@ -1,5 +1,5 @@
 [package]
-name = "parametric-eq"
+name = "parametric_eq"
 version = "0.1.0"
 authors = ["Billy Messenger <BillyDM@tutamail.com>","George Atkinson <geomyles@yahoo.co.uk>"]
 edition = "2018"
@@ -22,4 +22,5 @@ rtrb = "0.1"
 triple_buffer = "5.0.6"
 atomic_refcell = "0.1.7"
 rustfft = "6.0.0"
-num-complex = "0.4"
+num-complex = "0.4.0"
+

@@ -22,12 +22,12 @@ pub enum UIHandleMsg {
     CloseWindow
 }
 
-struct ParametricEQUI {
+pub struct ParametricEQUI {
     pub consumer: Arc<AtomicRefCell<Output<Vec<f32>>>>,
 }
 
 impl ParametricEQUI {
-    fn new(consumer: Arc<AtomicRefCell<Output<Vec<f32>>>>) -> Self {
+    pub fn new(consumer: Arc<AtomicRefCell<Output<Vec<f32>>>>) -> Self {
         Self {
             consumer,
         }
@@ -37,20 +37,20 @@ impl ParametricEQUI {
 impl Widget for ParametricEQUI {
     type Ret = Entity;
     fn on_build(&mut self, state: &mut State, entity: Entity) -> Self::Ret {
-        let header = Element::new().build(state, entity, |builder| {
-            builder
-                .set_width(Stretch(1.0))
-                .set_height(Pixels(30.0))
-                .set_background_color(Color::rgb(40,40,40))
-                .set_child_space(Stretch(1.0))
-                .set_text("Header")
-        });
+        // let header = Element::new().build(state, entity, |builder| {
+        //     builder
+        //         .set_width(Stretch(1.0))
+        //         .set_height(Pixels(30.0))
+        //         .set_background_color(Color::rgb(40,40,40))
+        //         .set_child_space(Stretch(1.0))
+        //         .set_text("Header")
+        // });
 
         let graph = Graph::new(self.consumer.clone()).build(state, entity, |builder| {
             builder
                 .set_width(Stretch(1.0))
                 .set_height(Stretch(1.0))
-                .set_background_color(Color::rgb(30,30,30))
+                .set_background_color(Color::rgb(33,30,33))
                 .set_child_space(Stretch(1.0))
                 .set_text("Graph")
         });

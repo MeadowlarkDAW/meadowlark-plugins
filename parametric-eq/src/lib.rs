@@ -10,9 +10,11 @@ use serde::{Deserialize, Serialize};
 use triple_buffer::{Input, Output, TripleBuffer};
 
 use std::cell::UnsafeCell;
-use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 mod ui;
+use ui::*;
+
+mod util;
 
 mod eq_core;
 use eq_core::{
