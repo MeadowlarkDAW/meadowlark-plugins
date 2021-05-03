@@ -10,6 +10,8 @@ use rustfft::{Fft, FftPlanner, num_complex::Complex, num_traits::real};
 use std::{cell::UnsafeCell, sync::Arc};
 use std::cmp::Ordering;
 
+use super::super::util::lpsd::lpsd;
+
 const frequencies: [f32; 27] = [1.477121, 1.60206, 1.69897, 1.778151, 1.845098, 1.90309, 1.954243, 2.0, 2.30103, 2.477121, 2.60206, 2.69897, 2.778151, 2.845098, 2.90309, 2.954243, 3.0, 3.30103, 3.477121, 3.60206, 3.69897, 3.778151, 3.845098, 3.90309, 3.954243, 4.0, 4.30103];
 
 pub struct Graph {
@@ -196,7 +198,7 @@ impl Widget for Graph {
             let mut path = Path::new();
             path.move_to(posx + 40.5 + t.ceil(), posy);
             path.line_to(posx + 40.5 + t.ceil(), posy + height);
-            let mut paint = Paint::color(femtovg::Color::rgb(80, 80, 80));
+            let mut paint = Paint::color(femtovg::Color::rgb(95, 87, 87));
             paint.set_line_width(1.0);
             canvas.stroke_path(&mut path, paint);
         }
@@ -206,7 +208,7 @@ impl Widget for Graph {
             let mut path = Path::new();
             path.move_to(posx, posy + 40.5 + t.ceil());
             path.line_to(posx + width, posy + 40.5 + t.ceil());
-            let mut paint = Paint::color(femtovg::Color::rgb(80, 80, 80));
+            let mut paint = Paint::color(femtovg::Color::rgb(95, 87, 87));
             paint.set_line_width(1.0);
             canvas.stroke_path(&mut path, paint);
 
@@ -216,9 +218,9 @@ impl Widget for Graph {
         //let t = (width - 40.0) / range;
         let mut path = Path::new();
         path.rect(posx + 30.0, posy + height - 27.0, 40.0, 14.0);
-        let mut paint = Paint::color(femtovg::Color::rgb(32, 32, 32));
+        let mut paint = Paint::color(femtovg::Color::rgb(33, 30, 33));
         canvas.fill_path(&mut path, paint);
-        let mut label_paint = Paint::color(femtovg::Color::rgb(80,80,80));
+        let mut label_paint = Paint::color(femtovg::Color::rgb(95, 87, 87));
         label_paint.set_text_align(femtovg::Align::Center);
         label_paint.set_text_baseline(Baseline::Middle);
         label_paint.set_font_size(12.0);
@@ -228,9 +230,9 @@ impl Widget for Graph {
         let t = (2.0 - min) * (width - 80.0) / range;
         let mut path = Path::new();
         path.rect(posx + 30.0 + t, posy + height - 27.0, 40.0, 14.0);
-        let mut paint = Paint::color(femtovg::Color::rgb(32, 32, 32));
+        let mut paint = Paint::color(femtovg::Color::rgb(33, 30, 33));
         canvas.fill_path(&mut path, paint);
-        let mut label_paint = Paint::color(femtovg::Color::rgb(80,80,80));
+        let mut label_paint = Paint::color(femtovg::Color::rgb(95, 87, 87));
         label_paint.set_text_align(femtovg::Align::Center);
         label_paint.set_text_baseline(Baseline::Middle);
         label_paint.set_font_size(12.0);
@@ -240,9 +242,9 @@ impl Widget for Graph {
         let t = (3.0 - min) * (width - 80.0) / range;
         let mut path = Path::new();
         path.rect(posx + 30.0 + t, posy + height - 27.0, 40.0, 14.0);
-        let mut paint = Paint::color(femtovg::Color::rgb(32, 32, 32));
+        let mut paint = Paint::color(femtovg::Color::rgb(33, 30, 33));
         canvas.fill_path(&mut path, paint);
-        let mut label_paint = Paint::color(femtovg::Color::rgb(80,80,80));
+        let mut label_paint = Paint::color(femtovg::Color::rgb(95, 87, 87));
         label_paint.set_text_align(femtovg::Align::Center);
         label_paint.set_text_baseline(Baseline::Middle);
         label_paint.set_font_size(12.0);
@@ -252,9 +254,9 @@ impl Widget for Graph {
         let t = (4.0 - min) * (width - 80.0) / range;
         let mut path = Path::new();
         path.rect(posx + 30.0 + t, posy + height - 27.0, 40.0, 14.0);
-        let mut paint = Paint::color(femtovg::Color::rgb(32, 32, 32));
+        let mut paint = Paint::color(femtovg::Color::rgb(33, 30, 33));
         canvas.fill_path(&mut path, paint);
-        let mut label_paint = Paint::color(femtovg::Color::rgb(80,80,80));
+        let mut label_paint = Paint::color(femtovg::Color::rgb(95, 87, 87));
         label_paint.set_text_align(femtovg::Align::Center);
         label_paint.set_text_baseline(Baseline::Middle);
         label_paint.set_font_size(12.0);
@@ -264,9 +266,9 @@ impl Widget for Graph {
         let t = width - 80.0;
         let mut path = Path::new();
         path.rect(posx + 30.0 + t, posy + height - 27.0, 40.0, 14.0);
-        let mut paint = Paint::color(femtovg::Color::rgb(32, 32, 32));
+        let mut paint = Paint::color(femtovg::Color::rgb(33, 30, 33));
         canvas.fill_path(&mut path, paint);
-        let mut label_paint = Paint::color(femtovg::Color::rgb(80,80,80));
+        let mut label_paint = Paint::color(femtovg::Color::rgb(95, 87, 87));
         label_paint.set_text_align(femtovg::Align::Center);
         label_paint.set_text_baseline(Baseline::Middle);
         label_paint.set_font_size(12.0);
@@ -276,9 +278,9 @@ impl Widget for Graph {
         let t = 0.0 * (height - 80.0) / 4.0;
         let mut path = Path::new();
         path.rect(posx, posy + height - 47.0, 40.0, 14.0);
-        let mut paint = Paint::color(femtovg::Color::rgb(32, 32, 32));
+        let mut paint = Paint::color(femtovg::Color::rgb(33, 30, 33));
         canvas.fill_path(&mut path, paint);
-        let mut label_paint = Paint::color(femtovg::Color::rgb(80,80,80));
+        let mut label_paint = Paint::color(femtovg::Color::rgb(95, 87, 87));
         label_paint.set_text_align(femtovg::Align::Center);
         label_paint.set_text_baseline(Baseline::Middle);
         label_paint.set_font_size(12.0);
@@ -288,9 +290,9 @@ impl Widget for Graph {
         let t = 1.0 * (height - 80.0) / 4.0;
         let mut path = Path::new();
         path.rect(posx, posy + height - 47.0 - t, 40.0, 14.0);
-        let mut paint = Paint::color(femtovg::Color::rgb(32, 32, 32));
+        let mut paint = Paint::color(femtovg::Color::rgb(33, 30, 33));
         canvas.fill_path(&mut path, paint);
-        let mut label_paint = Paint::color(femtovg::Color::rgb(80,80,80));
+        let mut label_paint = Paint::color(femtovg::Color::rgb(95, 87, 87));
         label_paint.set_text_align(femtovg::Align::Center);
         label_paint.set_text_baseline(Baseline::Middle);
         label_paint.set_font_size(12.0);
@@ -300,9 +302,9 @@ impl Widget for Graph {
         let t = 2.0 * (height - 80.0) / 4.0;
         let mut path = Path::new();
         path.rect(posx, posy + height - 47.0 - t, 40.0, 14.0);
-        let mut paint = Paint::color(femtovg::Color::rgb(32, 32, 32));
+        let mut paint = Paint::color(femtovg::Color::rgb(33, 30, 33));
         canvas.fill_path(&mut path, paint);
-        let mut label_paint = Paint::color(femtovg::Color::rgb(80,80,80));
+        let mut label_paint = Paint::color(femtovg::Color::rgb(95, 87, 87));
         label_paint.set_text_align(femtovg::Align::Center);
         label_paint.set_text_baseline(Baseline::Middle);
         label_paint.set_font_size(12.0);
@@ -312,9 +314,9 @@ impl Widget for Graph {
         let t = 3.0 * (height - 80.0) / 4.0;
         let mut path = Path::new();
         path.rect(posx, posy + height - 47.0 - t, 40.0, 14.0);
-        let mut paint = Paint::color(femtovg::Color::rgb(32, 32, 32));
+        let mut paint = Paint::color(femtovg::Color::rgb(33, 30, 33));
         canvas.fill_path(&mut path, paint);
-        let mut label_paint = Paint::color(femtovg::Color::rgb(80,80,80));
+        let mut label_paint = Paint::color(femtovg::Color::rgb(95, 87, 87));
         label_paint.set_text_align(femtovg::Align::Center);
         label_paint.set_text_baseline(Baseline::Middle);
         label_paint.set_font_size(12.0);
@@ -324,9 +326,9 @@ impl Widget for Graph {
         let t = 4.0 * (height - 80.0) / 4.0;
         let mut path = Path::new();
         path.rect(posx, posy + height - 47.0 - t, 40.0, 14.0);
-        let mut paint = Paint::color(femtovg::Color::rgb(32, 32, 32));
+        let mut paint = Paint::color(femtovg::Color::rgb(33, 30, 33));
         canvas.fill_path(&mut path, paint);
-        let mut label_paint = Paint::color(femtovg::Color::rgb(80,80,80));
+        let mut label_paint = Paint::color(femtovg::Color::rgb(95, 87, 87));
         label_paint.set_text_align(femtovg::Align::Center);
         label_paint.set_text_baseline(Baseline::Middle);
         label_paint.set_font_size(12.0);
@@ -336,7 +338,7 @@ impl Widget for Graph {
         // Draw Spectrum
 
         let mut path = Path::new();
-        path.move_to(posx + 40.5, posy + height);
+        // path.move_to(posx + 40.5, posy + height);
 
         let mut consumer = self.consumer.borrow_mut();
 
@@ -344,34 +346,59 @@ impl Widget for Graph {
 
         let output = consumer.output_buffer();
 
-        let mut planner = FftPlanner::new();
-        let fft = planner.plan_fft_forward(4096);
+        let real_buffer = lpsd(&output, 30.0, 20000.0, 720, 100, 2, 44100.0, 0.5);
 
-        let mut buffer = vec![Complex{re: 0.0f32, im: 0.0f32}; 4096];
+        // let mut planner = FftPlanner::new();
+        // let fft = planner.plan_fft_forward(1024);
 
-        for (elem, sample) in buffer.iter_mut().zip(output.iter()) {
-            *elem = Complex{re: *sample, im: 0.0f32};
-        }
+        // let mut buffer = vec![Complex{re: 0.0f32, im: 0.0f32}; 1024];
 
-        fft.process(&mut buffer);
+        // for (elem, sample) in buffer.iter_mut().zip(output.iter()) {
+        //     *elem = Complex{re: *sample, im: 0.0f32};
+        // }
 
-        let scale = 64.0; //sqrt(4096)
-        let real_buffer = buffer.into_iter().map(|sample| sample.norm()).collect::<Vec<f32>>();
-        //let maximum = real_buffer.iter().max_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Equal)).unwrap_or(&32.0);
+        // fft.process(&mut buffer);
+
+        let scale = 64.0; //sqrt(1024)
+        //let real_buffer = buffer.into_iter().map(|sample| sample.norm()).collect::<Vec<f32>>();
+        let maximum = real_buffer.iter().max_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Equal)).unwrap_or(&32.0);
 
         let mut alpha = (-2.0f32).exp();
 
-        for i in 0..real_buffer.len() / 2 {
-            let mut f = (i as f32) * (22500.0 / 2048.0);
-            f = f.log10();
-            let t = (f - min) * (width - 80.0) / range;
+        // for i in 0..real_buffer.len() / 2 {
+        //     let mut f = (i as f32) * (22500.0 / 2048.0);
+        //     f = f.log10();
+        //     let t = (f - min) * (width - 80.0) / range;
+        //     let sample = real_buffer[i] * alpha + self.prev_frame[i] * (1.0 - alpha);
+        //     let db_val = 1.0 + (10.0 * (sample/scale).log10()).max(-100.0) / 100.0;
+        //     path.line_to(posx + 40.5 + t as f32, posy + height + 30.0 - (db_val * height));
+        //     self.prev_frame[i] = sample;
+        // }
+        
+        for i in 0..720 {
+
+            let log_freq = log_index(i as f32, min, max);
+            let index = freq_to_index(log_freq, 44100.0, 1024);
+
+            // let low = index.floor();
+            // let high = index.ceil();
+            // let low_val = real_buffer[low as usize];
+            // let high_val = real_buffer[high as usize];
+            // let w = (index - low) / (high - low);
+            // let v = low_val + (high_val - low_val) * w;
             let sample = real_buffer[i] * alpha + self.prev_frame[i] * (1.0 - alpha);
-            let db_val = 1.0 + (10.0 * (sample/scale).log10()).max(-100.0) / 100.0;
-            path.line_to(posx + 40.5 + t as f32, posy + height + 30.0 - (db_val * height));
+            // let sample = real_buffer[i];
+            let db_val = 1.0 + (10.0 * (sample/1024.0).log10()).max(-100.0) / 100.0;
+            if i == 0 {
+                path.move_to(posx + 40.0 + i as f32, posy + height + 40.0 - (db_val * height));
+            } else {
+                path.line_to(posx + 40.0 + i as f32, posy + height + 40.0 - (db_val * height));
+            }
             self.prev_frame[i] = sample;
         }
 
-        let mut paint = Paint::color(femtovg::Color::rgb(200, 50, 50));
+
+        let mut paint = Paint::color(femtovg::Color::rgb(234, 189, 106));
         paint.set_line_join(femtovg::LineJoin::Bevel);
 
 
@@ -380,6 +407,25 @@ impl Widget for Graph {
     
     }
 
+}
+
+// Convert an FFT bin index to a frequency
+fn index_to_freq(index: usize, sampling_freq: f32, fft_length: usize) -> f32 {
+    let idx = index as f32;
+    return idx * ((sampling_freq / 2.0) / fft_length as f32);
+}
+
+fn freq_to_index(freq: f32, sampling_freq: f32, fft_length: usize) -> f32 {
+    return freq * (fft_length as f32) / sampling_freq;
+}
+
+fn to_log(value: f32, min: f32, max: f32) -> f32 {
+    let exp = (value - min) / (max - min);
+    return min * (max/min).powf(exp);
+}
+
+fn log_index(i: f32, min: f32, max: f32) -> f32 {
+    return 10.0f32.powf(min + (i * (max - min) / 720.0));
 }
 
 // Control Point

@@ -12,7 +12,10 @@ use atomic_refcell::AtomicRefCell;
 use std::sync::{Arc, Mutex};
 use std::rc::Rc;
 use std::cell::UnsafeCell;
-mod ui;
+pub mod ui;
+pub use ui::*;
+
+pub mod util;
 
 baseplug::model! {
     #[derive(Debug, Serialize, Deserialize)]
