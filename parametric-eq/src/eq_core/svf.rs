@@ -36,17 +36,21 @@ pub struct SVFCoefficients<T> {
 
 impl SVFCoefficients<f64> {
     pub fn get_amplitude(self, f_hz: f64) -> f64 {
+        //TODO gain up MESA
         let imag = Complex::new(0.0, 1.0);
 
         let z = (-TAU * f_hz * imag / self.fs).exp();
 
-        let denominator = (self.g.powf(2.0) + self.g * self.k + 1.0)
-            + 2.0 * (self.g.powf(2.0) - 1.0) * z.powf(-1.0)
-            + (self.g.powf(2.0) - self.g * self.k + 1.0) * z.powf(-2.0);
+        let gpow2 = self.g.powf(2.0);
+        let z_n1 = z.powf(-1.0);
+        let z_n2 = z.powf(-2.0);
+
+        let denominator = (gpow2 + self.g * self.k + 1.0)
+            + 2.0 * (gpow2 - 1.0) * z_n1
+            + (gpow2 - self.g * self.k + 1.0) * z_n2;
 
         let y = self.m0
-            + (self.m1 * self.g * (1.0 - z.powf(-2.0))
-                + self.m2 * self.g.powf(2.0) * (1.0 + 2.0 * z.powf(-1.0) + z.powf(-2.0)))
+            + (self.m1 * self.g * (1.0 - z_n2) + self.m2 * gpow2 * (1.0 + 2.0 * z_n1 + z_n2))
                 / denominator;
 
         return y.norm();
