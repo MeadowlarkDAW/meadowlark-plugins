@@ -93,6 +93,7 @@ impl SVFCoefficientsSet {
     }
 }
 
+#[derive(Copy, Clone, Debug)]
 pub struct FilterbandStereo {
     svf_l: [SVF<f64>; FILTER_POLE_COUNT],
     svf_r: [SVF<f64>; FILTER_POLE_COUNT],
@@ -123,6 +124,18 @@ impl FilterbandStereo {
             slope: 2.0,
             sample_rate: 48000.0,
         }
+    }
+
+    pub fn get_amplitude(&self, f_hz: f64) -> f64 {
+        let mut y = self.coeffs.get_amplitude(f_hz);
+        if self.kind == FilterKind::Mesa {
+            let gain = self.gain.db_to_lin();
+            y *= gain;
+        } else if self.kind == FilterKind::Tilt {
+            let gain = (self.gain * -1.0).db_to_lin();
+            y *= gain;
+        }
+        y
     }
 
     pub fn process(&mut self, l: f64, r: f64) -> [f64; 2] {
