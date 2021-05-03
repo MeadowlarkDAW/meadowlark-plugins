@@ -15,7 +15,12 @@ use std::sync::{Arc, Mutex};
 mod ui;
 
 mod eq_core;
-use eq_core::eq::{get_slope, FilterKind, FilterbandStereo};
+use eq_core::{
+    eq::{get_slope, FilterKind, FilterbandStereo},
+    svf,
+};
+
+use eq_core::svf::SVFCoefficients;
 
 const FILTER_COUNT: usize = 4;
 const FILTER_POLE_COUNT: usize = 16;
@@ -167,7 +172,6 @@ impl PluginContext<ParametricEQ> for ParametricEQShared {
         let triple_buffer = TripleBuffer::new(Vec::<f32>::with_capacity(1024));
 
         let (mut producer, mut consumer) = triple_buffer.split();
-
         Self {
             producer: Arc::new(AtomicRefCell::new(producer)),
             consumer: Arc::new(AtomicRefCell::new(consumer)),

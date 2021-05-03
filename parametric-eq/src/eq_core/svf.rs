@@ -1,4 +1,5 @@
-use std::f64::consts::PI;
+use num_complex::Complex;
+use std::f64::consts::{PI, TAU};
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Errors {
@@ -21,6 +22,7 @@ pub enum Type<DBGain> {
 
 #[derive(Copy, Clone, Debug)]
 pub struct SVFCoefficients<T> {
+    pub a: T,
     pub g: T,
     pub k: T,
     pub a1: T,
@@ -29,9 +31,27 @@ pub struct SVFCoefficients<T> {
     pub m0: T,
     pub m1: T,
     pub m2: T,
+    pub fs: T,
 }
 
 impl SVFCoefficients<f64> {
+    pub fn get_amplitude(self, f_hz: f64) -> f64 {
+        let imag = Complex::new(0.0, 1.0);
+
+        let z = (-TAU * f_hz * imag / self.fs).exp();
+
+        let denominator = (self.g.powf(2.0) + self.g * self.k + 1.0)
+            + 2.0 * (self.g.powf(2.0) - 1.0) * z.powf(-1.0)
+            + (self.g.powf(2.0) - self.g * self.k + 1.0) * z.powf(-2.0);
+
+        let y = self.m0
+            + (self.m1 * self.g * (1.0 - z.powf(-2.0))
+                + self.m2 * self.g.powf(2.0) * (1.0 + 2.0 * z.powf(-1.0) + z.powf(-2.0)))
+                / denominator;
+
+        return y.norm();
+    }
+
     /// Creates a SVF from a set of filter coefficients
     pub fn from_params(
         filter: Type<f64>,
@@ -46,8 +66,10 @@ impl SVFCoefficients<f64> {
         if q_value < 0.0 {
             return Err(Errors::NegativeQ);
         }
+
         match filter {
             Type::LowPass => {
+                let a = 1.0;
                 let g = (PI * f0 / fs).tan();
                 let k = 1.0 / q_value;
                 let a1 = 1.0 / (1.0 + g * (g + k));
@@ -57,6 +79,7 @@ impl SVFCoefficients<f64> {
                 let m1 = 0.0;
                 let m2 = 1.0;
                 Ok(SVFCoefficients {
+                    a,
                     g,
                     k,
                     a1,
@@ -65,9 +88,11 @@ impl SVFCoefficients<f64> {
                     m0,
                     m1,
                     m2,
+                    fs,
                 })
             }
             Type::HighPass => {
+                let a = 1.0;
                 let g = (PI * f0 / fs).tan();
                 let k = 1.0 / q_value;
                 let a1 = 1.0 / (1.0 + g * (g + k));
@@ -77,6 +102,7 @@ impl SVFCoefficients<f64> {
                 let m1 = -k;
                 let m2 = -1.0;
                 Ok(SVFCoefficients {
+                    a,
                     g,
                     k,
                     a1,
@@ -85,9 +111,11 @@ impl SVFCoefficients<f64> {
                     m0,
                     m1,
                     m2,
+                    fs,
                 })
             }
             Type::BandPass => {
+                let a = 1.0;
                 let g = (PI * f0 / fs).tan();
                 let k = 1.0 / q_value;
                 let a1 = 1.0 / (1.0 + g * (g + k));
@@ -97,6 +125,7 @@ impl SVFCoefficients<f64> {
                 let m1 = 1.0;
                 let m2 = 0.0;
                 Ok(SVFCoefficients {
+                    a,
                     g,
                     k,
                     a1,
@@ -105,9 +134,11 @@ impl SVFCoefficients<f64> {
                     m0,
                     m1,
                     m2,
+                    fs,
                 })
             }
             Type::Notch => {
+                let a = 1.0;
                 let g = (PI * f0 / fs).tan();
                 let k = 1.0 / q_value;
                 let a1 = 1.0 / (1.0 + g * (g + k));
@@ -117,6 +148,7 @@ impl SVFCoefficients<f64> {
                 let m1 = -k;
                 let m2 = 0.0;
                 Ok(SVFCoefficients {
+                    a,
                     g,
                     k,
                     a1,
@@ -125,9 +157,11 @@ impl SVFCoefficients<f64> {
                     m0,
                     m1,
                     m2,
+                    fs,
                 })
             }
             Type::AllPass => {
+                let a = 1.0;
                 let g = (PI * f0 / fs).tan();
                 let k = 1.0 / q_value;
                 let a1 = 1.0 / (1.0 + g * (g + k));
@@ -137,6 +171,7 @@ impl SVFCoefficients<f64> {
                 let m1 = -2.0 * k;
                 let m2 = 0.0;
                 Ok(SVFCoefficients {
+                    a,
                     g,
                     k,
                     a1,
@@ -145,6 +180,7 @@ impl SVFCoefficients<f64> {
                     m0,
                     m1,
                     m2,
+                    fs,
                 })
             }
             Type::LowShelf(db_gain) => {
@@ -158,6 +194,7 @@ impl SVFCoefficients<f64> {
                 let m1 = k * (a - 1.0);
                 let m2 = a * a - 1.0;
                 Ok(SVFCoefficients {
+                    a,
                     g,
                     k,
                     a1,
@@ -166,6 +203,7 @@ impl SVFCoefficients<f64> {
                     m0,
                     m1,
                     m2,
+                    fs,
                 })
             }
             Type::HighShelf(db_gain) => {
@@ -179,6 +217,7 @@ impl SVFCoefficients<f64> {
                 let m1 = k * (1.0 - a) * a;
                 let m2 = 1.0 - a * a;
                 Ok(SVFCoefficients {
+                    a,
                     g,
                     k,
                     a1,
@@ -187,6 +226,7 @@ impl SVFCoefficients<f64> {
                     m0,
                     m1,
                     m2,
+                    fs,
                 })
             }
             Type::PeakingEQ(db_gain) => {
@@ -200,6 +240,7 @@ impl SVFCoefficients<f64> {
                 let m1 = k * (a * a - 1.0);
                 let m2 = 0.0;
                 Ok(SVFCoefficients {
+                    a,
                     g,
                     k,
                     a1,
@@ -208,6 +249,7 @@ impl SVFCoefficients<f64> {
                     m0,
                     m1,
                     m2,
+                    fs,
                 })
             }
         }

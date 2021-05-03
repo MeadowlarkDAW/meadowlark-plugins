@@ -1,3 +1,3 @@
 pub mod eq;
-mod svf;
+pub mod svf;
 mod units;
