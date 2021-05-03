@@ -66,13 +66,39 @@ pub fn get_slope(slope: f32) -> f64 {
     }
 }
 
+#[derive(Copy, Clone, Debug)]
+pub struct SVFCoefficientsSet {
+    pub a: [SVFCoefficients<f64>; FILTER_POLE_COUNT],
+    pub b: [SVFCoefficients<f64>; FILTER_POLE_COUNT],
+}
+
+impl SVFCoefficientsSet {
+    pub fn new(sample_rate: f64) -> SVFCoefficientsSet {
+        let coeffs =
+            SVFCoefficients::<f64>::from_params(Type::PeakingEQ(0.0f64), sample_rate, 1000.0, 1.0)
+                .unwrap();
+        SVFCoefficientsSet {
+            a: [coeffs; FILTER_POLE_COUNT],
+            b: [coeffs; FILTER_POLE_COUNT],
+        }
+    }
+
+    pub fn get_amplitude(&self, f_hz: f64) -> f64 {
+        let mut y = 1.0f64;
+        for (band_a, band_b) in self.a.iter().zip(self.b.iter()) {
+            y *= band_a.get_amplitude(f_hz);
+            y *= band_b.get_amplitude(f_hz);
+        }
+        y
+    }
+}
+
 pub struct FilterbandStereo {
     svf_l: [SVF<f64>; FILTER_POLE_COUNT],
     svf_r: [SVF<f64>; FILTER_POLE_COUNT],
     svfb_l: [SVF<f64>; FILTER_POLE_COUNT],
     svfb_r: [SVF<f64>; FILTER_POLE_COUNT],
-    pub coeffs_a: [SVFCoefficients<f64>; FILTER_POLE_COUNT],
-    pub coeffs_b: [SVFCoefficients<f64>; FILTER_POLE_COUNT],
+    pub coeffs: SVFCoefficientsSet,
     kind: FilterKind,
     freq: f64,
     gain: f64,
@@ -83,16 +109,13 @@ pub struct FilterbandStereo {
 
 impl FilterbandStereo {
     pub fn new(sample_rate: f64) -> FilterbandStereo {
-        let coeffs_a =
-            SVFCoefficients::<f64>::from_params(Type::PeakingEQ(0.0f64), sample_rate, 1000.0, 1.0)
-                .unwrap();
+        let coeffs = SVFCoefficientsSet::new(sample_rate);
         FilterbandStereo {
-            svf_l: [SVF::<f64>::new(coeffs_a); FILTER_POLE_COUNT],
-            svf_r: [SVF::<f64>::new(coeffs_a); FILTER_POLE_COUNT],
-            svfb_l: [SVF::<f64>::new(coeffs_a); FILTER_POLE_COUNT],
-            svfb_r: [SVF::<f64>::new(coeffs_a); FILTER_POLE_COUNT],
-            coeffs_a: [coeffs_a; FILTER_POLE_COUNT],
-            coeffs_b: [coeffs_a; FILTER_POLE_COUNT],
+            svf_l: [SVF::<f64>::new(coeffs.a[0]); FILTER_POLE_COUNT],
+            svf_r: [SVF::<f64>::new(coeffs.a[0]); FILTER_POLE_COUNT],
+            svfb_l: [SVF::<f64>::new(coeffs.a[0]); FILTER_POLE_COUNT],
+            svfb_r: [SVF::<f64>::new(coeffs.a[0]); FILTER_POLE_COUNT],
+            coeffs,
             kind: FilterKind::Bell,
             freq: 1000.0,
             gain: 0.0,
@@ -176,145 +199,145 @@ impl FilterbandStereo {
 
         match self.kind {
             FilterKind::Bell => {
-                self.coeffs_a[0] = SVFCoefficients::<f64>::from_params(
+                self.coeffs.a[0] = SVFCoefficients::<f64>::from_params(
                     Type::PeakingEQ(gain),
                     sample_rate,
                     freq,
                     q_value,
                 )
                 .unwrap();
-                self.svf_l[0].update_coefficients(self.coeffs_a[0]);
-                self.svf_r[0].update_coefficients(self.coeffs_a[0]);
+                self.svf_l[0].update_coefficients(self.coeffs.a[0]);
+                self.svf_r[0].update_coefficients(self.coeffs.a[0]);
             }
             FilterKind::LowPass => {
                 for i in 0..(self.slope * 0.5) as usize {
                     let q_value = butterworth_cascade_q(u_slope, i as u32);
-                    self.coeffs_a[i] = SVFCoefficients::<f64>::from_params(
+                    self.coeffs.a[i] = SVFCoefficients::<f64>::from_params(
                         Type::LowPass,
                         sample_rate,
                         freq,
                         q_value * q_offset,
                     )
                     .unwrap();
-                    self.svf_l[i].update_coefficients(self.coeffs_a[i]);
-                    self.svf_r[i].update_coefficients(self.coeffs_a[i]);
+                    self.svf_l[i].update_coefficients(self.coeffs.a[i]);
+                    self.svf_r[i].update_coefficients(self.coeffs.a[i]);
                 }
             }
             FilterKind::HighPass => {
                 for i in 0..(self.slope * 0.5) as usize {
                     let q_value = butterworth_cascade_q(u_slope, i as u32);
-                    self.coeffs_a[i] = SVFCoefficients::<f64>::from_params(
+                    self.coeffs.a[i] = SVFCoefficients::<f64>::from_params(
                         Type::HighPass,
                         sample_rate,
                         freq,
                         q_value * q_offset,
                     )
                     .unwrap();
-                    self.svf_l[i].update_coefficients(self.coeffs_a[i]);
-                    self.svf_r[i].update_coefficients(self.coeffs_a[i]);
+                    self.svf_l[i].update_coefficients(self.coeffs.a[i]);
+                    self.svf_r[i].update_coefficients(self.coeffs.a[i]);
                 }
             }
             FilterKind::LowShelf => {
                 for i in 0..(self.slope * 0.5) as usize {
                     let q_value = butterworth_cascade_q(u_slope, i as u32);
-                    self.coeffs_a[i] = SVFCoefficients::<f64>::from_params(
+                    self.coeffs.a[i] = SVFCoefficients::<f64>::from_params(
                         Type::LowShelf(partial_gain),
                         sample_rate,
                         freq,
                         q_value * q_offset,
                     )
                     .unwrap();
-                    self.svf_l[i].update_coefficients(self.coeffs_a[i]);
-                    self.svf_r[i].update_coefficients(self.coeffs_a[i]);
+                    self.svf_l[i].update_coefficients(self.coeffs.a[i]);
+                    self.svf_r[i].update_coefficients(self.coeffs.a[i]);
                 }
             }
             FilterKind::HighShelf => {
                 for i in 0..(self.slope * 0.5) as usize {
                     let q_value = butterworth_cascade_q(u_slope, i as u32);
-                    self.coeffs_a[i] = SVFCoefficients::<f64>::from_params(
+                    self.coeffs.a[i] = SVFCoefficients::<f64>::from_params(
                         Type::HighShelf(partial_gain),
                         sample_rate,
                         freq,
                         q_value * q_offset,
                     )
                     .unwrap();
-                    self.svf_l[i].update_coefficients(self.coeffs_a[i]);
-                    self.svf_r[i].update_coefficients(self.coeffs_a[i]);
+                    self.svf_l[i].update_coefficients(self.coeffs.a[i]);
+                    self.svf_r[i].update_coefficients(self.coeffs.a[i]);
                 }
             }
             FilterKind::Notch => {
-                self.coeffs_a[0] =
+                self.coeffs.a[0] =
                     SVFCoefficients::<f64>::from_params(Type::Notch, sample_rate, freq, q_value)
                         .unwrap();
-                self.svf_l[0].update_coefficients(self.coeffs_a[0]);
-                self.svf_r[0].update_coefficients(self.coeffs_a[0]);
+                self.svf_l[0].update_coefficients(self.coeffs.a[0]);
+                self.svf_r[0].update_coefficients(self.coeffs.a[0]);
             }
             FilterKind::BandPass => {
                 for i in 0..(self.slope * 0.5) as usize {
                     let q_value = butterworth_cascade_q(u_slope, i as u32);
-                    self.coeffs_a[i] = SVFCoefficients::<f64>::from_params(
+                    self.coeffs.a[i] = SVFCoefficients::<f64>::from_params(
                         Type::HighPass,
                         sample_rate,
                         freq,
                         q_value * q_offset,
                     )
                     .unwrap();
-                    self.svf_l[i].update_coefficients(self.coeffs_a[i]);
-                    self.svf_r[i].update_coefficients(self.coeffs_a[i]);
-                    self.coeffs_b[i] = SVFCoefficients::<f64>::from_params(
+                    self.svf_l[i].update_coefficients(self.coeffs.a[i]);
+                    self.svf_r[i].update_coefficients(self.coeffs.a[i]);
+                    self.coeffs.b[i] = SVFCoefficients::<f64>::from_params(
                         Type::LowPass,
                         sample_rate,
                         freq,
                         q_value * q_offset,
                     )
                     .unwrap();
-                    self.svfb_l[i].update_coefficients(self.coeffs_b[i]);
-                    self.svfb_r[i].update_coefficients(self.coeffs_b[i]);
+                    self.svfb_l[i].update_coefficients(self.coeffs.b[i]);
+                    self.svfb_r[i].update_coefficients(self.coeffs.b[i]);
                 }
             }
             FilterKind::Tilt => {
                 for i in 0..(self.slope * 0.5) as usize {
                     let q_value = butterworth_cascade_q(u_slope, i as u32);
-                    self.coeffs_a[i] = SVFCoefficients::<f64>::from_params(
+                    self.coeffs.a[i] = SVFCoefficients::<f64>::from_params(
                         Type::HighShelf(partial_gain * 2.0),
                         sample_rate,
                         freq, // * (partial_gain * 0.495).db_to_lin()
                         q_value * q_offset,
                     )
                     .unwrap();
-                    self.svf_l[i].update_coefficients(self.coeffs_a[i]);
-                    self.svf_r[i].update_coefficients(self.coeffs_a[i]);
+                    self.svf_l[i].update_coefficients(self.coeffs.a[i]);
+                    self.svf_r[i].update_coefficients(self.coeffs.a[i]);
                 }
             }
             FilterKind::Mesa => {
                 for i in 0..(self.slope * 0.5) as usize {
                     let q_value = butterworth_cascade_q(u_slope, i as u32);
-                    self.coeffs_a[i] = SVFCoefficients::<f64>::from_params(
+                    self.coeffs.a[i] = SVFCoefficients::<f64>::from_params(
                         Type::LowShelf(-partial_gain),
                         sample_rate,
                         (freq / (self.bw_value + 0.5)).min(20000.0).max(20.0),
                         q_value,
                     )
                     .unwrap();
-                    self.svf_l[i].update_coefficients(self.coeffs_a[i]);
-                    self.svf_r[i].update_coefficients(self.coeffs_a[i]);
-                    self.coeffs_b[i] = SVFCoefficients::<f64>::from_params(
+                    self.svf_l[i].update_coefficients(self.coeffs.a[i]);
+                    self.svf_r[i].update_coefficients(self.coeffs.a[i]);
+                    self.coeffs.b[i] = SVFCoefficients::<f64>::from_params(
                         Type::HighShelf(-partial_gain),
                         sample_rate,
                         (freq * (self.bw_value + 0.5)).min(20000.0).max(20.0),
                         q_value,
                     )
                     .unwrap();
-                    self.svfb_l[i].update_coefficients(self.coeffs_b[i]);
-                    self.svfb_r[i].update_coefficients(self.coeffs_b[i]);
+                    self.svfb_l[i].update_coefficients(self.coeffs.b[i]);
+                    self.svfb_r[i].update_coefficients(self.coeffs.b[i]);
                 }
             }
             FilterKind::AllPass => {
-                self.coeffs_a[0] =
+                self.coeffs.a[0] =
                     SVFCoefficients::<f64>::from_params(Type::AllPass, sample_rate, freq, q_value)
                         .unwrap();
-                self.svf_l[0].update_coefficients(self.coeffs_a[0]);
-                self.svf_r[0].update_coefficients(self.coeffs_a[0]);
+                self.svf_l[0].update_coefficients(self.coeffs.a[0]);
+                self.svf_r[0].update_coefficients(self.coeffs.a[0]);
             }
         }
     }
