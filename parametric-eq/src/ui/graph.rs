@@ -10,13 +10,21 @@ use rustfft::{Fft, FftPlanner, num_complex::Complex, num_traits::real};
 use std::{cell::UnsafeCell, sync::Arc};
 use std::cmp::Ordering;
 
+use crate::eq_core::svf::{Type, SVFCoefficients};
+
 use super::super::util::lpsd::lpsd;
 
 const frequencies: [f32; 27] = [1.477121, 1.60206, 1.69897, 1.778151, 1.845098, 1.90309, 1.954243, 2.0, 2.30103, 2.477121, 2.60206, 2.69897, 2.778151, 2.845098, 2.90309, 2.954243, 3.0, 3.30103, 3.477121, 3.60206, 3.69897, 3.778151, 3.845098, 3.90309, 3.954243, 4.0, 4.30103];
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum EQEvent {
+    MovePoint(usize, f32, f32),
+}
+
 pub struct Graph {
     pub consumer: Arc<AtomicRefCell<Output<Vec<f32>>>>,
     prev_frame: Vec<f32>,
+    filters: [SVFCoefficients<f64>; 3],
 }
 
 impl Graph {
@@ -27,6 +35,11 @@ impl Graph {
         Self {
             consumer,
             prev_frame: vec![0.0f32; 2048],
+            filters: [
+                SVFCoefficients::<f64>::from_params(Type::PeakingEQ(-6.0), 44100.0, 1000.0, 1.0).unwrap(),
+                SVFCoefficients::<f64>::from_params(Type::PeakingEQ(0.0), 44100.0, 1000.0, 1.0).unwrap(),
+                SVFCoefficients::<f64>::from_params(Type::PeakingEQ(6.0), 44100.0, 1000.0, 1.0).unwrap(),
+            ]
         }
     }
 }
@@ -35,6 +48,25 @@ impl Widget for Graph {
     type Ret = Entity;
     fn on_build(&mut self, state: &mut State, entity: Entity) -> Self::Ret {
         entity
+    }
+
+    fn on_event(&mut self, state: &mut State, entity: Entity, event: &mut Event) {
+        if let Some(eq_event) = event.message.downcast() {
+            match eq_event {
+                EQEvent::MovePoint(index,x,y) => {
+
+                    let xx = *x - 40.0;
+                    let yy = *y - 40.0;
+
+                    let freq = index_to_freq(xx, 1.477121, 4.3013, 720.0);
+                    let amp = index_to_amp(yy, 12.0, -12.0, 370.0);
+
+                    //println!("{} {}", freq , amp);
+                    
+                    self.filters[*index] = SVFCoefficients::<f64>::from_params(Type::PeakingEQ(amp as f64), 44100.0, freq as f64, 1.0).unwrap();
+                }
+            }
+        }
     }
 
     fn on_draw(&mut self, state: &mut State, entity: Entity, canvas: &mut Canvas<OpenGl>) {
@@ -198,7 +230,18 @@ impl Widget for Graph {
             let mut path = Path::new();
             path.move_to(posx + 40.5 + t.ceil(), posy);
             path.line_to(posx + 40.5 + t.ceil(), posy + height);
-            let mut paint = Paint::color(femtovg::Color::rgb(95, 87, 87));
+            // let mut paint = Paint::color(femtovg::Color::rgb(95, 87, 87));
+            let mut paint = Paint::linear_gradient_stops(
+                0.0, 
+                0.0, 
+                0.0, 
+                height,
+                &[
+                        (0.0, femtovg::Color::rgb(33, 30, 33)),
+                        (0.1, femtovg::Color::rgb(95, 87, 87)),
+                        (0.9, femtovg::Color::rgb(95, 87, 87)),
+                        (1.0, femtovg::Color::rgb(33, 30, 33))
+                    ]);
             paint.set_line_width(1.0);
             canvas.stroke_path(&mut path, paint);
         }
@@ -208,7 +251,18 @@ impl Widget for Graph {
             let mut path = Path::new();
             path.move_to(posx, posy + 40.5 + t.ceil());
             path.line_to(posx + width, posy + 40.5 + t.ceil());
-            let mut paint = Paint::color(femtovg::Color::rgb(95, 87, 87));
+            //let mut paint = Paint::color(femtovg::Color::rgb(95, 87, 87));
+            let mut paint = Paint::linear_gradient_stops(
+                0.0, 
+                0.0, 
+                width,
+                0.0, 
+                &[
+                        (0.0, femtovg::Color::rgb(33, 30, 33)),
+                        (0.1, femtovg::Color::rgb(95, 87, 87)),
+                        (0.9, femtovg::Color::rgb(95, 87, 87)),
+                        (1.0, femtovg::Color::rgb(33, 30, 33))
+                    ]);
             paint.set_line_width(1.0);
             canvas.stroke_path(&mut path, paint);
 
@@ -217,122 +271,122 @@ impl Widget for Graph {
         // 30 Hz Label
         //let t = (width - 40.0) / range;
         let mut path = Path::new();
-        path.rect(posx + 30.0, posy + height - 27.0, 40.0, 14.0);
+        path.rect(posx + 30.0, posy + 10.0, 40.0, 14.0);
         let mut paint = Paint::color(femtovg::Color::rgb(33, 30, 33));
         canvas.fill_path(&mut path, paint);
         let mut label_paint = Paint::color(femtovg::Color::rgb(95, 87, 87));
         label_paint.set_text_align(femtovg::Align::Center);
         label_paint.set_text_baseline(Baseline::Middle);
         label_paint.set_font_size(12.0);
-        canvas.fill_text(posx + 49.0, posy + height - 20.0, "30 Hz", label_paint);
+        canvas.fill_text(posx + 49.0, posy + 16.0, "30 Hz", label_paint);
 
         // 100 Hz Label
         let t = (2.0 - min) * (width - 80.0) / range;
         let mut path = Path::new();
-        path.rect(posx + 30.0 + t, posy + height - 27.0, 40.0, 14.0);
+        path.rect(posx + 30.0 + t, posy + 10.0, 40.0, 14.0);
         let mut paint = Paint::color(femtovg::Color::rgb(33, 30, 33));
         canvas.fill_path(&mut path, paint);
         let mut label_paint = Paint::color(femtovg::Color::rgb(95, 87, 87));
         label_paint.set_text_align(femtovg::Align::Center);
         label_paint.set_text_baseline(Baseline::Middle);
         label_paint.set_font_size(12.0);
-        canvas.fill_text(posx + 49.0 + t, posy + height - 20.0, "100 Hz", label_paint);
+        canvas.fill_text(posx + 49.0 + t, posy + 16.0, "100 Hz", label_paint);
 
         // 1 KHz Label
         let t = (3.0 - min) * (width - 80.0) / range;
         let mut path = Path::new();
-        path.rect(posx + 30.0 + t, posy + height - 27.0, 40.0, 14.0);
+        path.rect(posx + 30.0 + t, posy + 10.0, 40.0, 14.0);
         let mut paint = Paint::color(femtovg::Color::rgb(33, 30, 33));
         canvas.fill_path(&mut path, paint);
         let mut label_paint = Paint::color(femtovg::Color::rgb(95, 87, 87));
         label_paint.set_text_align(femtovg::Align::Center);
         label_paint.set_text_baseline(Baseline::Middle);
         label_paint.set_font_size(12.0);
-        canvas.fill_text(posx + 49.0 + t, posy + height - 20.0, "1 kHz", label_paint);
+        canvas.fill_text(posx + 49.0 + t, posy + 16.0, "1 kHz", label_paint);
 
         // 10 KHz Label
         let t = (4.0 - min) * (width - 80.0) / range;
         let mut path = Path::new();
-        path.rect(posx + 30.0 + t, posy + height - 27.0, 40.0, 14.0);
+        path.rect(posx + 30.0 + t, posy + 10.0, 40.0, 14.0);
         let mut paint = Paint::color(femtovg::Color::rgb(33, 30, 33));
         canvas.fill_path(&mut path, paint);
         let mut label_paint = Paint::color(femtovg::Color::rgb(95, 87, 87));
         label_paint.set_text_align(femtovg::Align::Center);
         label_paint.set_text_baseline(Baseline::Middle);
         label_paint.set_font_size(12.0);
-        canvas.fill_text(posx + 49.0 + t, posy + height - 20.0, "10 kHz", label_paint);
+        canvas.fill_text(posx + 49.0 + t, posy + 16.0, "10 kHz", label_paint);
 
         // 20 KHz Label
         let t = width - 80.0;
         let mut path = Path::new();
-        path.rect(posx + 30.0 + t, posy + height - 27.0, 40.0, 14.0);
+        path.rect(posx + 30.0 + t, posy + 10.0, 40.0, 14.0);
         let mut paint = Paint::color(femtovg::Color::rgb(33, 30, 33));
         canvas.fill_path(&mut path, paint);
         let mut label_paint = Paint::color(femtovg::Color::rgb(95, 87, 87));
         label_paint.set_text_align(femtovg::Align::Center);
         label_paint.set_text_baseline(Baseline::Middle);
         label_paint.set_font_size(12.0);
-        canvas.fill_text(posx + 49.0 + t, posy + height - 20.0, "20 kHz", label_paint);
+        canvas.fill_text(posx + 49.0 + t, posy + 16.0, "20 kHz", label_paint);
 
         // -12 dB Label
         let t = 0.0 * (height - 80.0) / 4.0;
         let mut path = Path::new();
-        path.rect(posx, posy + height - 47.0, 40.0, 14.0);
+        path.rect(posx, posy + height - 55.0, 40.0, 14.0);
         let mut paint = Paint::color(femtovg::Color::rgb(33, 30, 33));
         canvas.fill_path(&mut path, paint);
         let mut label_paint = Paint::color(femtovg::Color::rgb(95, 87, 87));
         label_paint.set_text_align(femtovg::Align::Center);
         label_paint.set_text_baseline(Baseline::Middle);
         label_paint.set_font_size(12.0);
-        canvas.fill_text(posx + 20.0, posy + height - 40.0, "-12 dB", label_paint);
+        canvas.fill_text(posx + 20.0, posy + height - 48.0, "-12 dB", label_paint);
 
         // -6 dB Label
         let t = 1.0 * (height - 80.0) / 4.0;
         let mut path = Path::new();
-        path.rect(posx, posy + height - 47.0 - t, 40.0, 14.0);
+        path.rect(posx, posy + height - 55.0 - t, 40.0, 14.0);
         let mut paint = Paint::color(femtovg::Color::rgb(33, 30, 33));
         canvas.fill_path(&mut path, paint);
         let mut label_paint = Paint::color(femtovg::Color::rgb(95, 87, 87));
         label_paint.set_text_align(femtovg::Align::Center);
         label_paint.set_text_baseline(Baseline::Middle);
         label_paint.set_font_size(12.0);
-        canvas.fill_text(posx + 20.0, posy + height - 40.0 - t, "-6 dB", label_paint);
+        canvas.fill_text(posx + 20.0, posy + height - 48.0 - t, "-6 dB", label_paint);
 
         // 0 dB Label
         let t = 2.0 * (height - 80.0) / 4.0;
         let mut path = Path::new();
-        path.rect(posx, posy + height - 47.0 - t, 40.0, 14.0);
+        path.rect(posx, posy + height - 55.0 - t, 40.0, 14.0);
         let mut paint = Paint::color(femtovg::Color::rgb(33, 30, 33));
         canvas.fill_path(&mut path, paint);
         let mut label_paint = Paint::color(femtovg::Color::rgb(95, 87, 87));
         label_paint.set_text_align(femtovg::Align::Center);
         label_paint.set_text_baseline(Baseline::Middle);
         label_paint.set_font_size(12.0);
-        canvas.fill_text(posx + 20.0, posy + height - 40.0 - t, "0 dB", label_paint);
+        canvas.fill_text(posx + 20.0, posy + height - 48.0 - t, "0 dB", label_paint);
 
         // 6 dB Label
         let t = 3.0 * (height - 80.0) / 4.0;
         let mut path = Path::new();
-        path.rect(posx, posy + height - 47.0 - t, 40.0, 14.0);
+        path.rect(posx, posy + height - 55.0 - t, 40.0, 14.0);
         let mut paint = Paint::color(femtovg::Color::rgb(33, 30, 33));
         canvas.fill_path(&mut path, paint);
         let mut label_paint = Paint::color(femtovg::Color::rgb(95, 87, 87));
         label_paint.set_text_align(femtovg::Align::Center);
         label_paint.set_text_baseline(Baseline::Middle);
         label_paint.set_font_size(12.0);
-        canvas.fill_text(posx + 20.0, posy + height - 40.0 - t, "6 dB", label_paint);
+        canvas.fill_text(posx + 20.0, posy + height - 48.0 - t, "6 dB", label_paint);
 
         // 12 dB Label
         let t = 4.0 * (height - 80.0) / 4.0;
         let mut path = Path::new();
-        path.rect(posx, posy + height - 47.0 - t, 40.0, 14.0);
+        path.rect(posx, posy + height - 55.0 - t, 40.0, 14.0);
         let mut paint = Paint::color(femtovg::Color::rgb(33, 30, 33));
         canvas.fill_path(&mut path, paint);
         let mut label_paint = Paint::color(femtovg::Color::rgb(95, 87, 87));
         label_paint.set_text_align(femtovg::Align::Center);
         label_paint.set_text_baseline(Baseline::Middle);
         label_paint.set_font_size(12.0);
-        canvas.fill_text(posx + 20.0, posy + height - 40.0 - t, "12 dB", label_paint);
+        canvas.fill_text(posx + 20.0, posy + height - 48.0 - t, "12 dB", label_paint);
 
 
         // Draw Spectrum
@@ -346,86 +400,112 @@ impl Widget for Graph {
 
         let output = consumer.output_buffer();
 
-        let real_buffer = lpsd(&output, 30.0, 20000.0, 720, 100, 2, 44100.0, 0.5);
+        // let real_buffer = lpsd(&output, 30.0, 20000.0, 720, 100, 2, 44100.0, 0.5);
 
-        // let mut planner = FftPlanner::new();
-        // let fft = planner.plan_fft_forward(1024);
+        // // let mut planner = FftPlanner::new();
+        // // let fft = planner.plan_fft_forward(512);
 
-        // let mut buffer = vec![Complex{re: 0.0f32, im: 0.0f32}; 1024];
+        // // let mut buffer = vec![Complex{re: 0.0f32, im: 0.0f32}; 512];
 
-        // for (elem, sample) in buffer.iter_mut().zip(output.iter()) {
-        //     *elem = Complex{re: *sample, im: 0.0f32};
-        // }
+        // // for (elem, sample) in buffer.iter_mut().zip(output.iter()) {
+        // //     *elem = Complex{re: *sample, im: 0.0f32};
+        // // }
 
-        // fft.process(&mut buffer);
+        // // fft.process(&mut buffer);
 
-        let scale = 64.0; //sqrt(1024)
-        //let real_buffer = buffer.into_iter().map(|sample| sample.norm()).collect::<Vec<f32>>();
-        let maximum = real_buffer.iter().max_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Equal)).unwrap_or(&32.0);
+        // let scale = 64.0; //sqrt(512)
+        // //let real_buffer = buffer.into_iter().map(|sample| sample.norm()).collect::<Vec<f32>>();
+        // // let maximum = real_buffer.iter().max_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Equal)).unwrap_or(&32.0);
 
-        let mut alpha = (-2.0f32).exp();
+        // let mut alpha = (-2.0f32).exp();
 
-        // for i in 0..real_buffer.len() / 2 {
-        //     let mut f = (i as f32) * (22500.0 / 2048.0);
-        //     f = f.log10();
-        //     let t = (f - min) * (width - 80.0) / range;
+        // // for i in 0..real_buffer.len() / 2 {
+        // //     let mut f = (i as f32) * (22500.0 / 2048.0);
+        // //     f = f.log10();
+        // //     let t = (f - min) * (width - 80.0) / range;
+        // //     let sample = real_buffer[i] * alpha + self.prev_frame[i] * (1.0 - alpha);
+        // //     let db_val = 1.0 + (10.0 * (sample/scale).log10()).max(-100.0) / 100.0;
+        // //     path.line_to(posx + 40.5 + t as f32, posy + height + 30.0 - (db_val * height));
+        // //     self.prev_frame[i] = sample;
+        // // }
+        
+        // for i in 0..720 {
+
+        //     //let log_freq = log_index(i as f32, min, max);
+        //     //let index = freq_to_index(log_freq, 44100.0, 512);
+
+        //     // let low = index.floor();
+        //     // let high = index.ceil();
+        //     // let low_val = real_buffer[low as usize];
+        //     // let high_val = real_buffer[high as usize];
+        //     // let w = (index - low) / (high - low);
+        //     // let v = low_val + (high_val - low_val) * w;
         //     let sample = real_buffer[i] * alpha + self.prev_frame[i] * (1.0 - alpha);
-        //     let db_val = 1.0 + (10.0 * (sample/scale).log10()).max(-100.0) / 100.0;
-        //     path.line_to(posx + 40.5 + t as f32, posy + height + 30.0 - (db_val * height));
+        //     // let sample = real_buffer[i];
+        //     let db_val = 1.0 + (10.0 * (sample/512.0).log10()).max(-100.0) / 100.0;
+        //     if i == 0 {
+        //         path.move_to(posx + 40.0 + i as f32, posy + height + 40.0 - (db_val * height));
+        //     } else {
+        //         path.line_to(posx + 40.0 + i as f32, posy + height + 40.0 - (db_val * height));
+        //     }
         //     self.prev_frame[i] = sample;
         // }
-        
+
+        // let mut paint = Paint::color(femtovg::Color::rgb(234, 189, 106));
+        // paint.set_line_join(femtovg::LineJoin::Bevel);
+        // canvas.stroke_path(&mut path, paint);
+
+        // Draw bode plot
+        let mut path = Path::new();
+        let height_span = height - 80.0;
+
         for i in 0..720 {
+            let freq = index_to_freq(i as f32, min, max, 720.0);
+            let amp0 = self.filters[0].get_amplitude(freq as f64) as f32;
+            let amp1 = self.filters[1].get_amplitude(freq as f64) as f32;
+            let amp2 = self.filters[2].get_amplitude(freq as f64) as f32;
 
-            let log_freq = log_index(i as f32, min, max);
-            let index = freq_to_index(log_freq, 44100.0, 1024);
-
-            // let low = index.floor();
-            // let high = index.ceil();
-            // let low_val = real_buffer[low as usize];
-            // let high_val = real_buffer[high as usize];
-            // let w = (index - low) / (high - low);
-            // let v = low_val + (high_val - low_val) * w;
-            let sample = real_buffer[i] * alpha + self.prev_frame[i] * (1.0 - alpha);
-            // let sample = real_buffer[i];
-            let db_val = 1.0 + (10.0 * (sample/1024.0).log10()).max(-100.0) / 100.0;
+            let amp = (amp0 * amp1 * amp2);
+            
+            let amp_db = 20.0 * amp.log10().max(-12.0) / 12.0;
             if i == 0 {
-                path.move_to(posx + 40.0 + i as f32, posy + height + 40.0 - (db_val * height));
+                path.move_to(posx + 40.5 + i as f32, posy + 40.0 + height_span/2.0 - amp_db * height_span/2.0);
             } else {
-                path.line_to(posx + 40.0 + i as f32, posy + height + 40.0 - (db_val * height));
+                path.line_to(posx + 40.5 + i as f32, posy + 40.0 + height_span/2.0 - amp_db * height_span/2.0);
             }
-            self.prev_frame[i] = sample;
+            
         }
+        
 
-
-        let mut paint = Paint::color(femtovg::Color::rgb(234, 189, 106));
+        let mut paint = Paint::color(femtovg::Color::rgb(246, 67, 64));
         paint.set_line_join(femtovg::LineJoin::Bevel);
-
-
+        paint.set_line_width(2.0);
         canvas.stroke_path(&mut path, paint);
-
-    
     }
 
 }
 
 // Convert an FFT bin index to a frequency
-fn index_to_freq(index: usize, sampling_freq: f32, fft_length: usize) -> f32 {
-    let idx = index as f32;
-    return idx * ((sampling_freq / 2.0) / fft_length as f32);
+// fn index_to_freq(index: usize, sampling_freq: f32, fft_length: usize) -> f32 {
+//     let idx = index as f32;
+//     return idx * ((sampling_freq / 2.0) / fft_length as f32);
+// }
+
+// fn freq_to_index(freq: f32, sampling_freq: f32, fft_length: usize) -> f32 {
+//     return freq * (fft_length as f32) / sampling_freq;
+// }
+
+// fn to_log(value: f32, min: f32, max: f32) -> f32 {
+//     let exp = (value - min) / (max - min);
+//     return min * (max/min).powf(exp);
+// }
+
+fn index_to_freq(i: f32, min: f32, max: f32, length: f32) -> f32 {
+    return 10.0f32.powf(min + (i * (max - min) / length));
 }
 
-fn freq_to_index(freq: f32, sampling_freq: f32, fft_length: usize) -> f32 {
-    return freq * (fft_length as f32) / sampling_freq;
-}
-
-fn to_log(value: f32, min: f32, max: f32) -> f32 {
-    let exp = (value - min) / (max - min);
-    return min * (max/min).powf(exp);
-}
-
-fn log_index(i: f32, min: f32, max: f32) -> f32 {
-    return 10.0f32.powf(min + (i * (max - min) / 720.0));
+fn index_to_amp(i: f32, min: f32, max: f32, length: f32) -> f32 {
+    return min + (i * (max - min) / length);
 }
 
 // Control Point
@@ -433,15 +513,27 @@ pub struct ControlPoint {
     moving: bool,
     pos_down_left: f32,
     pos_down_top: f32,
+    text: String,
+    on_move: Option<Box<dyn Fn(f32,f32)->Event>>,
 }
 
 impl ControlPoint {
-    pub fn new() -> Self {
+    pub fn new(text: &str) -> Self {
         Self {
             moving: false,
             pos_down_left: 0.0,
             pos_down_top: 0.0,
+            on_move: None,
+            text: text.to_owned(),
         }
+    }
+
+    pub fn on_move<F>(mut self, message: F) -> Self
+        where F: 'static + Fn(f32, f32) -> Event,
+    {
+        self.on_move = Some(Box::new(message));
+
+        self
     }
 }
 
@@ -453,7 +545,7 @@ impl Widget for ControlPoint {
             .set_height(state, Pixels(20.0))
             .set_border_radius(state, Pixels(10.0))
             .set_child_space(state, Stretch(1.0))
-            .set_text(state, "1")
+            .set_text(state, &self.text)
             .set_background_color(state, Color::rgb(100, 100, 100))
             .set_position_type(state, PositionType::SelfDirected)
     }
@@ -483,8 +575,23 @@ impl Widget for ControlPoint {
                             let parent = state.hierarchy.get_parent(entity).unwrap();
                             let parent_left = state.data.get_posx(parent);
                             let parent_top = state.data.get_posy(parent);
-                            entity.set_left(state, Pixels(*x - parent_left - self.pos_down_left)).set_top(state, Pixels(*y - parent_top - self.pos_down_top));
+
+                            let width = state.data.get_width(entity);
+                            let height = state.data.get_height(entity);
+                            entity
+                                .set_left(state, Pixels(*x - parent_left - self.pos_down_left))
+                                .set_top(state, Pixels(*y - parent_top - self.pos_down_top));
                         
+                            if let Some(on_event) = &self.on_move {
+                                let mut event = (on_event)(*x - parent_left - self.pos_down_left + width / 2.0, *y - parent_top - self.pos_down_top + height / 2.0);
+                                event.origin = entity;
+                    
+                                if event.target == Entity::null() {
+                                    event.target = entity;
+                                }
+                    
+                                state.insert_event(event);
+                            }
                         
                             state.insert_event(
                                 Event::new(WindowEvent::Redraw).target(Entity::root()),

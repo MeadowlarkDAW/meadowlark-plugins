@@ -1,21 +1,26 @@
 knob {
-    background-color: #2e2e2e;
+    background-color: #211e21;
 }
 
 knob>.back {
-    background-color: #2e2e2e;
+    background-color: #111111;
 }
 
 knob>.slider {
-    background-color: #3669c9;
+    background-color: #f64336;
 }
 
 knob>.tick {
-    background-color: #c8c8c8;
+    background-color: #211e21;
+}
+
+label {
+    color: #ffffff;
+    font-size: 16;
 }
 
 textbox {
-    color: white;
-    background-color: #2e2e2e;
-    child-left: 5px;
+    color: #ffffff;
+    background-color: #211e21;
+    font-size: 16;
 }

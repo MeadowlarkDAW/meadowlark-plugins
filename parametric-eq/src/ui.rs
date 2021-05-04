@@ -55,23 +55,32 @@ impl Widget for ParametricEQUI {
                 .set_text("Graph")
         });
 
-        // let control_point = ControlPoint::new().build(state, graph, |builder| builder);
+        let control_point = ControlPoint::new("1")
+        .on_move(move |x, y| Event::new(EQEvent::MovePoint(0,x,y)).target(graph))
+        .build(state, graph, |builder| builder);
 
-        // let controls = Element::new().build(state, entity, |builder| {
-        //     builder
-        //         .set_width(Stretch(1.0))
-        //         .set_height(Pixels(150.0))
-        //         .set_background_color(Color::rgb(80,80,80))
-        //         .set_child_left(Stretch(1.0))
-        //         .set_child_right(Stretch(1.0))
-        //         .set_text("Controls")
-        // });
+        let control_point = ControlPoint::new("2")
+        .on_move(move |x, y| Event::new(EQEvent::MovePoint(1,x,y)).target(graph))
+        .build(state, graph, |builder| builder);
 
-        // ChannelControls::new().build(state, controls, |builder|
-        //     builder
-        //         .set_width(Units::Auto)
-        //         .set_height(Stretch(1.0))
-        // );
+        let control_point = ControlPoint::new("3")
+        .on_move(move |x, y| Event::new(EQEvent::MovePoint(2,x,y)).target(graph))
+        .build(state, graph, |builder| builder);
+
+        let controls = Element::new().build(state, entity, |builder| {
+            builder
+                .set_width(Stretch(1.0))
+                .set_height(Pixels(150.0))
+                .set_background_color(Color::rgb(33,30,33))
+                .set_child_left(Stretch(1.0))
+                .set_child_right(Stretch(1.0))
+        });
+
+        ChannelControls::new().build(state, controls, |builder|
+            builder
+                .set_width(Units::Auto)
+                .set_height(Stretch(1.0))
+        );
 
         entity
     }
