@@ -11,34 +11,57 @@ use std::{cell::UnsafeCell, sync::Arc};
 use std::cmp::Ordering;
 
 use crate::eq_core::svf::{Type, SVFCoefficients};
+use crate::EQEvent;
 
 use super::super::util::lpsd::lpsd;
+use crate::util::*;
 
 const frequencies: [f32; 27] = [1.477121, 1.60206, 1.69897, 1.778151, 1.845098, 1.90309, 1.954243, 2.0, 2.30103, 2.477121, 2.60206, 2.69897, 2.778151, 2.845098, 2.90309, 2.954243, 3.0, 3.30103, 3.477121, 3.60206, 3.69897, 3.778151, 3.845098, 3.90309, 3.954243, 4.0, 4.30103];
 
-#[derive(Debug, Clone, PartialEq)]
-pub enum EQEvent {
-    MovePoint(usize, f32, f32),
+#[derive(Debug,Copy,Clone)]
+struct Params {
+    gain: f32,
+    freq: f32,
+    q: f32,
 }
 
 pub struct Graph {
     pub consumer: Arc<AtomicRefCell<Output<Vec<f32>>>>,
-    prev_frame: Vec<f32>,
     filters: [SVFCoefficients<f64>; 3],
+    params: [Params; 3],
 }
 
 impl Graph {
     pub fn new(consumer: Arc<AtomicRefCell<Output<Vec<f32>>>>,) -> Self {
-        
-
-        
         Self {
-            consumer,
-            prev_frame: vec![0.0f32; 2048],
+
+            consumer: consumer.clone(),
+
             filters: [
                 SVFCoefficients::<f64>::from_params(Type::PeakingEQ(-6.0), 44100.0, 1000.0, 1.0).unwrap(),
                 SVFCoefficients::<f64>::from_params(Type::PeakingEQ(0.0), 44100.0, 1000.0, 1.0).unwrap(),
                 SVFCoefficients::<f64>::from_params(Type::PeakingEQ(6.0), 44100.0, 1000.0, 1.0).unwrap(),
+            ],
+
+            params: [
+                Params {
+                    gain: 0.0,
+                    freq: 1000.0,
+                    q: 1.0,
+                },
+
+                Params {
+                    gain: 0.0,
+                    freq: 2000.0,
+                    q: 1.0,
+                },
+
+                Params {
+                    gain: 0.0,
+                    freq: 3000.0,
+                    q: 1.0,
+                },
+
             ]
         }
     }
@@ -64,7 +87,22 @@ impl Widget for Graph {
                     //println!("{} {}", freq , amp);
                     
                     self.filters[*index] = SVFCoefficients::<f64>::from_params(Type::PeakingEQ(amp as f64), 44100.0, freq as f64, 1.0).unwrap();
+                    self.params[*index] = Params {gain: amp, freq: freq, q: 1.0};
                 }
+
+                EQEvent::SetFreq(index, freq) => {
+                    let params = self.params[*index];
+                    self.filters[*index] = SVFCoefficients::<f64>::from_params(Type::PeakingEQ(params.gain as f64), 44100.0, *freq as f64, 1.0).unwrap();
+                    self.params[*index].freq = *freq;
+                }
+
+                EQEvent::SetGain(index, gain) => {
+                    let params = self.params[*index];
+                    self.filters[*index] = SVFCoefficients::<f64>::from_params(Type::PeakingEQ(*gain as f64), 44100.0, params.freq as f64, 1.0).unwrap();
+                    self.params[*index].gain = *gain;
+                }
+
+                _=> {}
             }
         }
     }
@@ -456,9 +494,53 @@ impl Widget for Graph {
         // canvas.stroke_path(&mut path, paint);
 
         // Draw bode plot
-        let mut path = Path::new();
         let height_span = height - 80.0;
+        
+        for index in 0..3 {
+            let mut fill_path = Path::new();
+            let mut stroke_path = Path::new();
+            fill_path.move_to(posx + 40.5, posy + 40.0 + height_span / 2.0);
+            for i in 0..720 {
+                let freq = index_to_freq(i as f32, min, max, 720.0);
+                let amp = self.filters[index].get_amplitude(freq as f64) as f32;
+                let amp_db = 20.0 * amp.log10().max(-12.0) / 12.0;
+                fill_path.line_to(posx + 40.5 + i as f32, posy + 40.0 + height_span/2.0 - amp_db * height_span/2.0);
+                if i == 0 {
+                    stroke_path.move_to(posx + 40.5 + i as f32, posy + 40.0 + height_span/2.0 - amp_db * height_span/2.0);
+                } else {
+                    stroke_path.line_to(posx + 40.5 + i as f32, posy + 40.0 + height_span/2.0 - amp_db * height_span/2.0);
+                }
+            }
+            fill_path.line_to(posx + 40.5 + 720.0,posy + 40.0 + height_span / 2.0);
+            fill_path.line_to(posx + 40.5, posy + 40.0 + height_span / 2.0);
+            path.close();
 
+            
+            let paint = if index == 0 {
+                Paint::color(femtovg::Color::rgba(64, 67, 246, 126))
+            } else if index == 1 {
+                Paint::color(femtovg::Color::rgba(180, 67, 246, 126))
+            } else {
+                Paint::color(femtovg::Color::rgba(246, 67, 246, 126))
+            };
+            canvas.fill_path(&mut fill_path, paint);
+
+            let mut paint = if index == 0 {
+                Paint::color(femtovg::Color::rgb(64, 67, 246))
+            } else if index == 1 {
+                Paint::color(femtovg::Color::rgb(180, 67, 246))
+            } else {
+                Paint::color(femtovg::Color::rgb(246, 67, 246))
+            };
+
+            paint.set_line_join(femtovg::LineJoin::Bevel);
+            paint.set_line_width(1.0);
+            canvas.stroke_path(&mut stroke_path, paint);            
+        }
+
+
+        
+        let mut path = Path::new();
         for i in 0..720 {
             let freq = index_to_freq(i as f32, min, max, 720.0);
             let amp0 = self.filters[0].get_amplitude(freq as f64) as f32;
@@ -485,36 +567,19 @@ impl Widget for Graph {
 
 }
 
-// Convert an FFT bin index to a frequency
-// fn index_to_freq(index: usize, sampling_freq: f32, fft_length: usize) -> f32 {
-//     let idx = index as f32;
-//     return idx * ((sampling_freq / 2.0) / fft_length as f32);
-// }
-
-// fn freq_to_index(freq: f32, sampling_freq: f32, fft_length: usize) -> f32 {
-//     return freq * (fft_length as f32) / sampling_freq;
-// }
-
-// fn to_log(value: f32, min: f32, max: f32) -> f32 {
-//     let exp = (value - min) / (max - min);
-//     return min * (max/min).powf(exp);
-// }
-
-fn index_to_freq(i: f32, min: f32, max: f32, length: f32) -> f32 {
-    return 10.0f32.powf(min + (i * (max - min) / length));
-}
-
-fn index_to_amp(i: f32, min: f32, max: f32, length: f32) -> f32 {
-    return min + (i * (max - min) / length);
-}
-
 // Control Point
 pub struct ControlPoint {
     moving: bool,
     pos_down_left: f32,
     pos_down_top: f32,
     text: String,
-    on_move: Option<Box<dyn Fn(f32,f32)->Event>>,
+    pub px: f32,
+    pub py: f32,
+    minx: f32,
+    maxx: f32,
+    miny: f32,
+    maxy: f32,
+    on_move: Option<Box<dyn Fn(&Self, &mut State, Entity)>>,
 }
 
 impl ControlPoint {
@@ -523,13 +588,19 @@ impl ControlPoint {
             moving: false,
             pos_down_left: 0.0,
             pos_down_top: 0.0,
+            px: 0.0,
+            py: 0.0,
+            minx: 40.0,
+            maxx: 760.0,
+            miny: 40.0,
+            maxy: 410.0,
             on_move: None,
             text: text.to_owned(),
         }
     }
 
     pub fn on_move<F>(mut self, message: F) -> Self
-        where F: 'static + Fn(f32, f32) -> Event,
+        where F: 'static + Fn(&Self, &mut State, Entity),
     {
         self.on_move = Some(Box::new(message));
 
@@ -559,6 +630,23 @@ impl Widget for ControlPoint {
                         state.capture(entity);
                         self.pos_down_left = state.mouse.left.pos_down.0 - state.data.get_posx(entity);
                         self.pos_down_top = state.mouse.left.pos_down.1 - state.data.get_posy(entity);
+
+                        let parent = state.hierarchy.get_parent(entity).unwrap();
+                        let parent_left = state.data.get_posx(parent);
+                        let parent_top = state.data.get_posy(parent);
+
+                        let width = state.data.get_width(entity);
+                        let height = state.data.get_height(entity);
+
+                        self.px = state.mouse.left.pos_down.0 - parent_left - self.pos_down_left + width / 2.0;
+                        self.py = state.mouse.left.pos_down.1 - parent_top - self.pos_down_top + height / 2.0;
+
+                        self.px = self.px.clamp(self.minx, self.maxx);
+                        self.py = self.py.clamp(self.miny, self.maxy);
+
+                        if let Some(on_move) = &self.on_move {
+                            (on_move)(self, state, entity);
+                        }
                     }
                 }
 
@@ -578,19 +666,20 @@ impl Widget for ControlPoint {
 
                             let width = state.data.get_width(entity);
                             let height = state.data.get_height(entity);
-                            entity
-                                .set_left(state, Pixels(*x - parent_left - self.pos_down_left))
-                                .set_top(state, Pixels(*y - parent_top - self.pos_down_top));
+                            
                         
-                            if let Some(on_event) = &self.on_move {
-                                let mut event = (on_event)(*x - parent_left - self.pos_down_left + width / 2.0, *y - parent_top - self.pos_down_top + height / 2.0);
-                                event.origin = entity;
-                    
-                                if event.target == Entity::null() {
-                                    event.target = entity;
-                                }
-                    
-                                state.insert_event(event);
+                            self.px = *x - parent_left - self.pos_down_left + width / 2.0;
+                            self.py = *y - parent_top - self.pos_down_top + height / 2.0;
+
+                            self.px = self.px.clamp(self.minx, self.maxx);
+                            self.py = self.py.clamp(self.miny, self.maxy);
+
+                            entity
+                                .set_left(state, Pixels(self.px - width / 2.0))
+                                .set_top(state, Pixels(self.py - height / 2.0));
+
+                            if let Some(on_move) = &self.on_move {
+                                (on_move)(self, state, entity);
                             }
                         
                             state.insert_event(

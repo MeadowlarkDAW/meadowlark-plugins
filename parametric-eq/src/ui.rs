@@ -15,8 +15,16 @@ use std::sync::{Arc, Mutex};
 use std::{cell::UnsafeCell, rc::Rc};
 
 use super::ParametricEQShared;
+use crate::util::*;
 
 static THEME: &str = include_str!("ui/theme.css");
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum EQEvent {
+    MovePoint(usize, f32, f32),
+    SetFreq(usize, f32),
+    SetGain(usize, f32),
+}
 
 pub enum UIHandleMsg {
     CloseWindow
@@ -24,12 +32,18 @@ pub enum UIHandleMsg {
 
 pub struct ParametricEQUI {
     pub consumer: Arc<AtomicRefCell<Output<Vec<f32>>>>,
+    selected_control: usize,
+    controls: [Entity; 3],
+    graph: Entity,
 }
 
 impl ParametricEQUI {
     pub fn new(consumer: Arc<AtomicRefCell<Output<Vec<f32>>>>) -> Self {
         Self {
             consumer,
+            selected_control: 0,
+            controls: [Entity::null(); 3],
+            graph: Entity::null(),
         }
     }
 }
@@ -55,17 +69,7 @@ impl Widget for ParametricEQUI {
                 .set_text("Graph")
         });
 
-        let control_point = ControlPoint::new("1")
-        .on_move(move |x, y| Event::new(EQEvent::MovePoint(0,x,y)).target(graph))
-        .build(state, graph, |builder| builder);
-
-        let control_point = ControlPoint::new("2")
-        .on_move(move |x, y| Event::new(EQEvent::MovePoint(1,x,y)).target(graph))
-        .build(state, graph, |builder| builder);
-
-        let control_point = ControlPoint::new("3")
-        .on_move(move |x, y| Event::new(EQEvent::MovePoint(2,x,y)).target(graph))
-        .build(state, graph, |builder| builder);
+        self.graph = graph;
 
         let controls = Element::new().build(state, entity, |builder| {
             builder
@@ -76,13 +80,77 @@ impl Widget for ParametricEQUI {
                 .set_child_right(Stretch(1.0))
         });
 
-        ChannelControls::new().build(state, controls, |builder|
+        let controls = ChannelControls::new()
+        .build(state, controls, |builder|
             builder
                 .set_width(Units::Auto)
                 .set_height(Stretch(1.0))
         );
 
+        let control_point = ControlPoint::new("1")
+        .on_move(move |knob, state, entity| {
+            state.insert_event(Event::new(EQEvent::MovePoint(0,knob.px,knob.py)).target(graph));
+            state.insert_event(Event::new(EQEvent::MovePoint(0,knob.px,knob.py)).target(controls));
+
+        })
+        .build(state, graph, |builder| builder);
+
+        self.controls[0] = control_point;
+
+        let control_point = ControlPoint::new("2")
+        .on_move(move |knob, state, entity| {
+            state.insert_event(Event::new(EQEvent::MovePoint(1,knob.px,knob.py)).target(graph));
+            state.insert_event(Event::new(EQEvent::MovePoint(1,knob.px,knob.py)).target(controls));
+        })
+        .build(state, graph, |builder| builder);
+
+        self.controls[1] = control_point;
+
+        let control_point = ControlPoint::new("3")
+        .on_move(move |knob, state, entity| {
+            state.insert_event(Event::new(EQEvent::MovePoint(2,knob.px,knob.py)).target(graph));
+            state.insert_event(Event::new(EQEvent::MovePoint(2,knob.px,knob.py)).target(controls));
+        })
+        .build(state, graph, |builder| builder);
+
+        self.controls[2] = control_point;
+
         entity
+    }
+
+    fn on_event(&mut self, state: &mut State, entity: Entity, event: &mut Event) {
+        if let Some(eq_event) = event.message.downcast() {
+            match eq_event {
+
+                EQEvent::MovePoint(index, _, _) => {
+                    self.selected_control = *index;
+                }
+
+                EQEvent::SetFreq(index, freq) => {
+
+                    let min = 1.477121;
+                    let max = 4.3013;
+                    let x = freq_to_index(*freq, min, max, 720.0);
+
+                    self.controls[self.selected_control].set_left(state, Pixels(x + 30.0));
+
+                    state.insert_event(Event::new(EQEvent::SetFreq(self.selected_control, *freq)).direct(self.graph));
+                }
+
+                EQEvent::SetGain(index, gain) => {
+
+                    let min = 1.477121;
+                    let max = 4.3013;
+                    let x = amp_to_index(*gain, 12.0, -12.0, 370.0);
+
+                    self.controls[self.selected_control].set_top(state, Pixels(x + 30.0));
+
+                    state.insert_event(Event::new(EQEvent::SetGain(self.selected_control, *gain)).direct(self.graph));
+                }
+
+                _=> {}
+            }
+        }
     }
 }
 
