@@ -461,11 +461,11 @@ impl Widget for Graph {
 
         for i in 0..720 {
             let freq = index_to_freq(i as f32, min, max, 720.0);
-            let amp0 = self.filters[0].get_amplitude(freq as f64) as f32;
-            let amp1 = self.filters[1].get_amplitude(freq as f64) as f32;
-            let amp2 = self.filters[2].get_amplitude(freq as f64) as f32;
+            let amp0 = self.filters[0].get_bode_sample(freq as f64).norm() as f32;
+            let amp1 = self.filters[1].get_bode_sample(freq as f64).norm() as f32;
+            let amp2 = self.filters[2].get_bode_sample(freq as f64).norm() as f32;
 
-            let amp = (amp0 * amp1 * amp2);
+            let amp = amp0 * amp1 * amp2;
             
             let amp_db = 20.0 * amp.log10().max(-12.0) / 12.0;
             if i == 0 {

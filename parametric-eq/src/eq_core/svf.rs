@@ -35,8 +35,8 @@ pub struct SVFCoefficients<T> {
 }
 
 impl SVFCoefficients<f64> {
-    pub fn get_amplitude(self, f_hz: f64) -> f64 {
-        //TODO gain up MESA
+    pub fn get_bode_sample(self, f_hz: f64) -> Complex<f64> {
+        //Use y.norm() for amplitude and -y.arg().to_degrees() for phase. Add to combine phase.
         let imag = Complex::new(0.0, 1.0);
 
         let z = (-TAU * f_hz * imag / self.fs).exp();
@@ -53,7 +53,7 @@ impl SVFCoefficients<f64> {
             + (self.m1 * self.g * (1.0 - z_n2) + self.m2 * gpow2 * (1.0 + 2.0 * z_n1 + z_n2))
                 / denominator;
 
-        return y.norm();
+        y
     }
 
     /// Creates a SVF from a set of filter coefficients
