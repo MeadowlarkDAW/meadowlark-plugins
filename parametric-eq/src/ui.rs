@@ -1,4 +1,5 @@
 use baseplug::Param;
+use femtovg::renderer::OpenGl;
 use rtrb::Consumer;
 use raw_window_handle::HasRawWindowHandle;
 use triple_buffer::{Input, Output, TripleBuffer};
@@ -26,23 +27,30 @@ pub enum EQEvent {
     SetGain(usize, f32),
 }
 
+#[derive(Debug, Copy, Clone)]
 pub enum UIHandleMsg {
-    CloseWindow
+    CloseWindow,
+    SetGain(usize, f32),
+    SetFreq(usize, f32),
 }
 
 pub struct ParametricEQUI {
+    message_consumer: Consumer<UIHandleMsg>,
     pub consumer: Arc<AtomicRefCell<Output<Vec<f32>>>>,
     selected_control: usize,
     controls: [Entity; 3],
+    header: Entity,
     graph: Entity,
 }
 
 impl ParametricEQUI {
-    pub fn new(consumer: Arc<AtomicRefCell<Output<Vec<f32>>>>) -> Self {
+    pub fn new(message_consumer: Consumer<UIHandleMsg>, consumer: Arc<AtomicRefCell<Output<Vec<f32>>>>) -> Self {
         Self {
+            message_consumer,
             consumer,
             selected_control: 0,
             controls: [Entity::null(); 3],
+            header: Entity::null(),
             graph: Entity::null(),
         }
     }
@@ -51,7 +59,7 @@ impl ParametricEQUI {
 impl Widget for ParametricEQUI {
     type Ret = Entity;
     fn on_build(&mut self, state: &mut State, entity: Entity) -> Self::Ret {
-        // let header = Element::new().build(state, entity, |builder| {
+        // self.header = Element::new().build(state, entity, |builder| {
         //     builder
         //         .set_width(Stretch(1.0))
         //         .set_height(Pixels(30.0))
@@ -134,7 +142,7 @@ impl Widget for ParametricEQUI {
 
                     self.controls[self.selected_control].set_left(state, Pixels(x + 30.0));
 
-                    state.insert_event(Event::new(EQEvent::SetFreq(self.selected_control, *freq)).direct(self.graph));
+                    state.insert_event(Event::new(EQEvent::SetFreq(*index, *freq)).direct(self.graph));
                 }
 
                 EQEvent::SetGain(index, gain) => {
@@ -145,7 +153,31 @@ impl Widget for ParametricEQUI {
 
                     self.controls[self.selected_control].set_top(state, Pixels(x + 30.0));
 
-                    state.insert_event(Event::new(EQEvent::SetGain(self.selected_control, *gain)).direct(self.graph));
+                    state.insert_event(Event::new(EQEvent::SetGain(*index, *gain)).direct(self.graph));
+                }
+
+                _=> {}
+            }
+        }
+    }
+
+    fn on_draw(&mut self, state: &mut State, entity: Entity, canvas: &mut femtovg::Canvas<femtovg::renderer::OpenGl>) {
+        while let Ok(message) = self.message_consumer.pop() {
+            match message {
+                UIHandleMsg::SetGain(index, gain) => {
+                    //self.header.set_text(state, &gain.to_string());
+                    let gain = -12.0 + gain * (24.0);
+                    state.insert_event(Event::new(EQEvent::SetGain(index, gain)).direct(entity));
+                    state.insert_event(Event::new(EQEvent::SetGain(index, gain)).direct(self.graph));
+                }
+
+                UIHandleMsg::SetFreq(index, freq) => {
+                    
+                    //let gain = -12.0 + gain * (24.0);
+                    let f = 10.0f32.powf( 30.0f32.log10() + ( 20000.0f32.log10() - 30.0f32.log10()) * freq );
+                    self.header.set_text(state, &f.to_string());
+                    state.insert_event(Event::new(EQEvent::SetFreq(index, f)).direct(entity));
+                    state.insert_event(Event::new(EQEvent::SetFreq(index, f)).direct(self.graph));
                 }
 
                 _=> {}
@@ -158,12 +190,12 @@ impl Widget for ParametricEQUI {
 pub fn build_and_run(handle_msg_rx: Consumer<UIHandleMsg>, parent_window: &impl HasRawWindowHandle, shared: &ParametricEQShared) {
 
     let consumer = shared.consumer.clone();
-
+    //let message_consumer = handle_msg_rx.clone();
     let window_description = WindowDescription::new().with_title("EQ PLUGIN").with_inner_size(800, 600);
     let app = Application::new(window_description, move |state, window| {
         state.add_theme(THEME);
 
-        ParametricEQUI::new(consumer.clone()).build(state, window, |builder| builder);
+        ParametricEQUI::new(handle_msg_rx, consumer.clone()).build(state, window, |builder| builder);
     });
 
     app.open_parented(parent_window);
