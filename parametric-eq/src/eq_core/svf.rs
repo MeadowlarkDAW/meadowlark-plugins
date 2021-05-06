@@ -21,9 +21,27 @@ pub enum Type<DBGain> {
 }
 
 #[derive(Copy, Clone, Debug)]
+pub struct ZSample {
+    pow1: Complex<f64>,
+    pow2: Complex<f64>,
+}
+
+impl ZSample {
+    pub fn new(f_hz: f64, fs: f64) -> ZSample {
+        let z = -TAU * f_hz / fs;
+        let z = z.cos() + z.sin() * Complex::new(0.0, 1.0);
+        ZSample {
+            pow1: z,
+            pow2: z * z,
+        }
+    }
+}
+
+#[derive(Copy, Clone, Debug)]
 pub struct SVFCoefficients<T> {
     pub a: T,
     pub g: T,
+    pub gpow2: T,
     pub k: T,
     pub a1: T,
     pub a2: T,
@@ -35,25 +53,19 @@ pub struct SVFCoefficients<T> {
 }
 
 impl SVFCoefficients<f64> {
-    pub fn get_amplitude(self, f_hz: f64) -> f64 {
-        //TODO gain up MESA
-        let imag = Complex::new(0.0, 1.0);
+    pub fn get_bode_sample(self, z: ZSample) -> Complex<f64> {
+        //Use y.norm() for amplitude and y.arg().to_degrees() for phase. Add to combine phase.
 
-        let z = (-TAU * f_hz * imag / self.fs).exp();
-
-        let gpow2 = self.g.powf(2.0);
-        let z_n1 = z.powf(-1.0);
-        let z_n2 = z.powf(-2.0);
-
-        let denominator = (gpow2 + self.g * self.k + 1.0)
-            + 2.0 * (gpow2 - 1.0) * z_n1
-            + (gpow2 - self.g * self.k + 1.0) * z_n2;
+        let denominator = (self.gpow2 + self.g * self.k + 1.0)
+            + 2.0 * (self.gpow2 - 1.0) * z.pow1
+            + (self.gpow2 - self.g * self.k + 1.0) * z.pow2;
 
         let y = self.m0
-            + (self.m1 * self.g * (1.0 - z_n2) + self.m2 * gpow2 * (1.0 + 2.0 * z_n1 + z_n2))
+            + (self.m1 * self.g * (1.0 - z.pow2)
+                + self.m2 * self.gpow2 * (1.0 + 2.0 * z.pow1 + z.pow2))
                 / denominator;
 
-        return y.norm();
+        y
     }
 
     /// Creates a SVF from a set of filter coefficients
@@ -85,6 +97,7 @@ impl SVFCoefficients<f64> {
                 Ok(SVFCoefficients {
                     a,
                     g,
+                    gpow2: g * g,
                     k,
                     a1,
                     a2,
@@ -108,6 +121,7 @@ impl SVFCoefficients<f64> {
                 Ok(SVFCoefficients {
                     a,
                     g,
+                    gpow2: g * g,
                     k,
                     a1,
                     a2,
@@ -131,6 +145,7 @@ impl SVFCoefficients<f64> {
                 Ok(SVFCoefficients {
                     a,
                     g,
+                    gpow2: g * g,
                     k,
                     a1,
                     a2,
@@ -154,6 +169,7 @@ impl SVFCoefficients<f64> {
                 Ok(SVFCoefficients {
                     a,
                     g,
+                    gpow2: g * g,
                     k,
                     a1,
                     a2,
@@ -177,6 +193,7 @@ impl SVFCoefficients<f64> {
                 Ok(SVFCoefficients {
                     a,
                     g,
+                    gpow2: g * g,
                     k,
                     a1,
                     a2,
@@ -200,6 +217,7 @@ impl SVFCoefficients<f64> {
                 Ok(SVFCoefficients {
                     a,
                     g,
+                    gpow2: g * g,
                     k,
                     a1,
                     a2,
@@ -223,6 +241,7 @@ impl SVFCoefficients<f64> {
                 Ok(SVFCoefficients {
                     a,
                     g,
+                    gpow2: g * g,
                     k,
                     a1,
                     a2,
@@ -246,6 +265,7 @@ impl SVFCoefficients<f64> {
                 Ok(SVFCoefficients {
                     a,
                     g,
+                    gpow2: g * g,
                     k,
                     a1,
                     a2,

@@ -10,7 +10,7 @@ use rustfft::{Fft, FftPlanner, num_complex::Complex, num_traits::real};
 use std::{cell::UnsafeCell, sync::Arc};
 use std::cmp::Ordering;
 
-use crate::eq_core::svf::{Type, SVFCoefficients};
+use crate::eq_core::svf::{Type, SVFCoefficients, ZSample};
 use crate::EQEvent;
 
 use super::super::util::lpsd::lpsd;
@@ -543,11 +543,12 @@ impl Widget for Graph {
         let mut path = Path::new();
         for i in 0..720 {
             let freq = index_to_freq(i as f32, min, max, 720.0);
-            let amp0 = self.filters[0].get_amplitude(freq as f64) as f32;
-            let amp1 = self.filters[1].get_amplitude(freq as f64) as f32;
-            let amp2 = self.filters[2].get_amplitude(freq as f64) as f32;
+            let z = ZSample::new(freq as f64, 44100.0); //TODO get actual sample rate
+            let amp0 = self.filters[0].get_bode_sample(z).norm() as f32;
+            let amp1 = self.filters[1].get_bode_sample(z).norm() as f32;
+            let amp2 = self.filters[2].get_bode_sample(z).norm() as f32;
 
-            let amp = (amp0 * amp1 * amp2);
+            let amp = amp0 * amp1 * amp2;
             
             let amp_db = 20.0 * amp.log10().max(-12.0) / 12.0;
             if i == 0 {
