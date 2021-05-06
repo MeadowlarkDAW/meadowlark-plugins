@@ -27,6 +27,11 @@ use eq_core::svf::SVFCoefficients;
 const FILTER_COUNT: usize = 4;
 const FILTER_POLE_COUNT: usize = 16;
 
+pub enum EQMessage {
+    // Set the parameters of a filter (index, gain, freq, q)
+    SetParams(usize, f32, f32, f32),
+}
+
 baseplug::model! {
     #[derive(Debug, Serialize, Deserialize)]
     struct ParametricEQModel {
@@ -164,6 +169,9 @@ impl Default for ParametricEQModel {
 pub struct ParametricEQShared {
     pub producer: Arc<AtomicRefCell<Input<Vec<f32>>>>,
     pub consumer: Arc<AtomicRefCell<Output<Vec<f32>>>>,
+
+    pub message_producer: Arc<AtomicRefCell<Producer<EQMessage>>>,
+    pub message_consumer: Arc<AtomicRefCell<Consumer<EQMessage>>>,
 }
 
 unsafe impl Send for ParametricEQShared {}
@@ -172,11 +180,19 @@ unsafe impl Sync for ParametricEQShared {}
 impl PluginContext<ParametricEQ> for ParametricEQShared {
     fn new() -> Self {
         let triple_buffer = TripleBuffer::new(Vec::<f32>::with_capacity(1024));
-
         let (mut producer, mut consumer) = triple_buffer.split();
+
+        let message_queue = RingBuffer::<EQMessage>::new(512);
+        let (mut message_producer, mut message_consumer) = message_queue.split();
+
         Self {
+            // For sample buffers sent from Audio to UI
             producer: Arc::new(AtomicRefCell::new(producer)),
             consumer: Arc::new(AtomicRefCell::new(consumer)),
+
+            // For messages sent from UI to Audio
+            message_producer: Arc::new(AtomicRefCell::new(message_producer)),
+            message_consumer: Arc::new(AtomicRefCell::new(message_consumer)),
         }
     }
 }
@@ -282,6 +298,16 @@ impl Plugin for ParametricEQ {
             self.buffer.push(input[0][i]);
         }
 
+        let message_consumer = shared.message_consumer.borrow_mut();
+
+        // while let Some(message) = message_consumer.pop() {
+        //     match message {
+        //         EQMessage::SetBand1Gain(gain) => {
+        //             model.band_1_gain.
+        //         }
+        //     }
+        // }
+
         for i in 0..ctx.nframes {
             //output[0][i] = input[0][i] * model.out_gain[i];
             //output[1][i] = input[1][i] * model.out_gain[i];
@@ -304,7 +330,7 @@ impl Plugin for ParametricEQ {
 }
 
 impl baseplug::PluginUI for ParametricEQ {
-    type Handle = Producer<ui::UIHandleMsg>;
+    type Handle = Arc<AtomicRefCell<Producer<ui::UIHandleMsg>>>;
 
     fn ui_size() -> (i16, i16) {
         (800, 600)
@@ -318,20 +344,28 @@ impl baseplug::PluginUI for ParametricEQ {
 
         ui::build_and_run(handle_msg_rx, parent, shared);
 
-        Ok(handle_msg_tx)
+        Ok(Arc::new(AtomicRefCell::new(handle_msg_tx)))
     }
 
     fn ui_param_notify(
-        _handle: &Self::Handle,
-        _param: &'static baseplug::Param<Self, <Self::Model as baseplug::Model<Self>>::Smooth>,
-        _val: f32,
+        handle: &Self::Handle,
+        param: &'static baseplug::Param<Self, <Self::Model as baseplug::Model<Self>>::Smooth>,
+        val: f32,
     ) {
-        // TODO: implement this
+
+        let mut message_producer = handle.borrow_mut();
+        if param.name == "band 1 gain" {
+            let _ = message_producer.push(ui::UIHandleMsg::SetGain(0, val)).unwrap();
+        }
+        if param.name == "band 1 freq" {
+            let _ = message_producer.push(ui::UIHandleMsg::SetFreq(0, val)).unwrap();
+        }
     }
 
     fn ui_close(mut handle: Self::Handle) {
         // TODO: Do something more elegant than panicking if this fails.
-        let _ = handle.push(ui::UIHandleMsg::CloseWindow).unwrap();
+        let mut message_producer = handle.borrow_mut();
+        let _ = message_producer.push(ui::UIHandleMsg::CloseWindow).unwrap();
     }
 }
 
