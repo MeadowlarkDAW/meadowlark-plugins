@@ -2,7 +2,7 @@
 
 use tuix::*;
 
-use crate::EQEvent;
+use super::EQEvent;
 
 pub struct ChannelControls {
     gain_knob: Entity,
@@ -26,7 +26,7 @@ impl Widget for ChannelControls {
         self.gain_knob = ValueKnob::new("GAIN", 0.0, -12.0, 12.0)
         .with_units(UnitsType::dB)
         .on_changing(|knob, state, entity|{
-            state.insert_event(Event::new(EQEvent::SetGain(0, knob.value)).target(entity));
+            state.insert_event(Event::new(EQEvent::SetGain(5, knob.value)).target(entity));
         })
         .build(state, entity, |builder| 
              builder
@@ -40,7 +40,7 @@ impl Widget for ChannelControls {
         .with_log_scale()
         .with_units(UnitsType::Hertz)
         .on_changing(|knob, state, entity|{
-            state.insert_event(Event::new(EQEvent::SetFreq(0, knob.value)).target(entity));
+            state.insert_event(Event::new(EQEvent::SetFreq(5, knob.value)).target(entity));
         })
         .build(state, entity, |builder| 
             builder
@@ -90,8 +90,16 @@ impl Widget for ChannelControls {
                     let freq = index_to_freq(xx, 1.477121, 4.3013, 720.0);
                     let amp = index_to_amp(yy, 12.0, -12.0, 370.0);
 
-                    state.insert_event(Event::new(SliderEvent::SetValue(amp)).target(self.gain_knob));
-                    state.insert_event(Event::new(SliderEvent::SetValue(freq)).target(self.freq_knob));
+                    //state.insert_event(Event::new(SliderEvent::SetValue(amp)).target(self.gain_knob));
+                    //state.insert_event(Event::new(SliderEvent::SetValue(freq)).target(self.freq_knob));
+                }
+
+                EQEvent::SetGain(index, gain) => {
+                    state.insert_event(Event::new(SliderEvent::SetValue(*gain)).target(self.gain_knob));
+                }
+
+                EQEvent::SetFreq(index, freq) => {
+                    state.insert_event(Event::new(SliderEvent::SetValue(*freq)).target(self.freq_knob));
                 }
 
                 _=> {}

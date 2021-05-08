@@ -68,7 +68,7 @@ pub fn get_slope(slope: f32) -> f64 {
     }
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct SVFCoefficientsSet {
     pub a: [SVFCoefficients<f64>; FILTER_POLE_COUNT],
     pub b: [SVFCoefficients<f64>; FILTER_POLE_COUNT],
@@ -96,7 +96,7 @@ impl SVFCoefficientsSet {
     }
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct FilterbandStereo {
     svf_l: [SVF<f64>; FILTER_POLE_COUNT],
     svf_r: [SVF<f64>; FILTER_POLE_COUNT],
@@ -104,8 +104,8 @@ pub struct FilterbandStereo {
     svfb_r: [SVF<f64>; FILTER_POLE_COUNT],
     pub coeffs: SVFCoefficientsSet,
     kind: FilterKind,
-    freq: f64,
-    gain: f64,
+    pub freq: f64,
+    pub gain: f64,
     bw_value: f64,
     slope: f64,
     sample_rate: f64,

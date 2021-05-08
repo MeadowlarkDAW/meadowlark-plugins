@@ -12,14 +12,19 @@ crate-type = ["cdylib"]
 
 [dependencies]
 # baseplug = { git = "https://github.com/wrl/baseplug.git", branch="trunk" }
-baseplug = { git = "https://github.com/WeirdConstructor/baseplug", branch = "plugin_context"}
+# baseplug = { git = "https://github.com/WeirdConstructor/baseplug", branch = "plugin_context"}
+vst = "0.2"
 baseview = { git = "https://github.com/RustAudio/baseview.git", branch="master" }
+dirs = "3"
+log = "0.4"
+log-panics = { version = "2", features = ["with-backtrace"] }
+simplelog = "0.8"
 # tuix = { git = "https://github.com/geom3trik/tuix.git", branch="experiment", default-features = false, features = ["baseview"] }
 tuix = {path = "../../tuix", default-features = false, features = ["baseview"]}
 femtovg = {git = "https://github.com/femtovg/femtovg", branch = "master"}
-serde = { version = "1.0", features = ["derive"] }
+# serde = { version = "1.0", features = ["derive"] }
 raw-window-handle = "0.3"
-rtrb = "0.1"
+ringbuf = "0.2.4"
 triple_buffer = "5.0.6"
 atomic_refcell = "0.1.7"
 rustfft = "6.0.0"

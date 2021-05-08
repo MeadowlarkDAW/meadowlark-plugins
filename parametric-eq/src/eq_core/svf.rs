@@ -37,7 +37,7 @@ impl ZSample {
     }
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct SVFCoefficients<T> {
     pub a: T,
     pub g: T,
@@ -281,7 +281,7 @@ impl SVFCoefficients<f64> {
 }
 
 /// Internal states and coefficients of the SVF form
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct SVF<T> {
     ic1eq: T,
     ic2eq: T,
