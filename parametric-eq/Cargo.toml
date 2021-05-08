@@ -19,8 +19,8 @@ dirs = "3"
 log = "0.4"
 log-panics = { version = "2", features = ["with-backtrace"] }
 simplelog = "0.8"
-# tuix = { git = "https://github.com/geom3trik/tuix.git", branch="experiment", default-features = false, features = ["baseview"] }
-tuix = {path = "../../tuix", default-features = false, features = ["baseview"]}
+tuix = { git = "https://github.com/geom3trik/tuix.git", branch="experiment", default-features = false, features = ["baseview"] }
+# tuix = {path = "../../tuix", default-features = false, features = ["baseview"]}
 femtovg = {git = "https://github.com/femtovg/femtovg", branch = "master"}
 # serde = { version = "1.0", features = ["derive"] }
 raw-window-handle = "0.3"
