@@ -228,9 +228,12 @@ impl Widget for EQUI {
             let max = 4.3013;
             let x = freq_to_index(freq as f32, min, max, 720.0);
             let y = amp_to_index(gain as f32, 12.0, -12.0, 370.0);
+            
+            self.control_points[index].set_left(state, Pixels(x + 30.0));
+            self.control_points[index].set_top(state, Pixels(y + 30.0));
+
             if !self.dragging && index == self.selected_control {
-                //self.control_points[self.selected_control].set_left(state, Pixels(x + 30.0));
-                //self.control_points[self.selected_control].set_top(state, Pixels(y + 30.0));
+                
                 
                 // Doesn't work for some reason
                 //state.data.set_posx(self.control_points[index], x + 30.0);
