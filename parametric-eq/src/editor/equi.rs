@@ -22,6 +22,9 @@ pub enum EQEvent {
     MovePoint(usize, f32, f32),
     SetFreq(usize, f32),
     SetGain(usize, f32),
+    SetWidth(usize, f32),
+    SetSlope(usize, f32),
+    SetKind(usize, f32),
 }
 
 pub struct EQUI {
@@ -53,20 +56,20 @@ impl EQUI {
 impl Widget for EQUI {
     type Ret = Entity;
     fn on_build(&mut self, state: &mut State, entity: Entity) -> Self::Ret {
-        // self.header = Element::new().build(state, entity, |builder| {
-        //     builder
-        //         .set_width(Stretch(1.0))
-        //         .set_height(Pixels(30.0))
-        //         .set_background_color(Color::rgb(40,40,40))
-        //         .set_child_space(Stretch(1.0))
-        //         .set_text("Header")
-        // });
+        self.header = Element::new().build(state, entity, |builder| {
+            builder
+                .set_width(Stretch(1.0))
+                .set_height(Pixels(30.0))
+                .set_background_color(Color::rgb(32,29,32))
+                .set_child_space(Stretch(1.0))
+                .set_text("Header")
+        });
 
         let graph = Graph::new(self.params.clone(), self.sample_rate.clone()).build(state, entity, |builder| {
             builder
                 .set_width(Stretch(1.0))
                 .set_height(Stretch(1.0))
-                .set_background_color(Color::rgb(33,30,33))
+                .set_background_color(Color::rgb(23,18,21))
                 .set_child_space(Stretch(1.0))
                 .set_text("Graph")
         });
@@ -76,8 +79,8 @@ impl Widget for EQUI {
         let controls = Element::new().build(state, entity, |builder| {
             builder
                 .set_width(Stretch(1.0))
-                .set_height(Pixels(150.0))
-                .set_background_color(Color::rgb(33,30,33))
+                .set_height(Pixels(120.0))
+                .set_background_color(Color::rgb(32,29,32))
                 .set_child_left(Stretch(1.0))
                 .set_child_right(Stretch(1.0))
         });
@@ -198,6 +201,42 @@ impl Widget for EQUI {
                     event.consume();
 
                     //state.insert_event(Event::new(EQEvent::SetGain(*index, *gain)).direct(self.graph));
+                }
+
+                EQEvent::SetWidth(index, width) => {
+                    let idx = if *index == 5 {
+                        self.selected_control
+                    } else {
+                        *index
+                    };
+
+                    self.params.bands[idx].bw.set(*width as f64);
+
+                    event.consume();
+                }
+
+                EQEvent::SetSlope(index, slope) => {
+                    let idx = if *index == 5 {
+                        self.selected_control
+                    } else {
+                        *index
+                    };
+
+                    self.params.bands[idx].slope.set(*slope as f64);
+
+                    event.consume();
+                }
+
+                EQEvent::SetKind(index, kind) => {
+                    let idx = if *index == 5 {
+                        self.selected_control
+                    } else {
+                        *index
+                    };
+
+                    self.params.bands[idx].kind.set(*kind as f64);
+
+                    event.consume();
                 }
 
                 // EQEvent::SetKind(index, kind) => {
