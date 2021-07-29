@@ -67,14 +67,19 @@ impl Widget for ChannelControls {
         );
 
         Button::with_label("A")
-        .on_press(Event::new(EQEvent::SetKind(5, 1.0)))
-        .build(state, left_col, |builder| builder.set_background_color(Color::rgb(100,50,50)));
+            .on_press(|_, state, button| {
+                button.emit(state, EQEvent::SetKind(5, 1.0));
+            })
+            .build(state, left_col, |builder| 
+                builder
+                    .set_background_color(Color::rgb(100,50,50))
+            );
         Button::with_label("D")
-        .on_press(Event::new(EQEvent::SetKind(5, 2.0)))
-        .build(state, left_col, |builder| builder.set_background_color(Color::rgb(0,100,50)));
+            .on_press(|_, state, button| {button.emit(state, EQEvent::SetKind(5, 2.0));})
+            .build(state, left_col, |builder| builder.set_background_color(Color::rgb(0,100,50)));
         Button::with_label("G")
-        .on_press(Event::new(EQEvent::SetKind(5, 3.0)))
-        .build(state, left_col, |builder| builder.set_background_color(Color::rgb(0,50,100)));
+            .on_press(|_, state, button| {button.emit(state, EQEvent::SetKind(5, 3.0));})
+            .build(state, left_col, |builder| builder.set_background_color(Color::rgb(0,50,100)));
 
         let middle_col = Column::new().build(state, row, |builder|
             builder
@@ -84,14 +89,20 @@ impl Widget for ChannelControls {
         );
 
         Button::with_label("B")
-        .on_press(Event::new(EQEvent::SetKind(5, 4.0)))
-        .build(state, middle_col, |builder| builder.set_background_color(Color::rgb(0,100,50)));
+            .on_press(|_, state, button| {
+                button.emit(state, EQEvent::SetKind(5, 4.0));
+            })
+            .build(state, middle_col, |builder| builder.set_background_color(Color::rgb(0,100,50)));
         Button::with_label("E")
-        .on_press(Event::new(EQEvent::SetKind(5, 5.0)))
-        .build(state, middle_col, |builder| builder.set_background_color(Color::rgb(0,50,100)));
+            .on_press(|_, state, button| {
+                button.emit(state, EQEvent::SetKind(5, 5.0));
+            })
+            .build(state, middle_col, |builder| builder.set_background_color(Color::rgb(0,50,100)));
         Button::with_label("H")
-        .on_press(Event::new(EQEvent::SetKind(5, 6.0)))
-        .build(state, middle_col, |builder| builder.set_background_color(Color::rgb(100,50,50)));
+            .on_press(|_, state, button| {
+                button.emit(state, EQEvent::SetKind(5, 6.0));
+            })
+            .build(state, middle_col, |builder| builder.set_background_color(Color::rgb(100,50,50)));
 
         let right_col =  Column::new().build(state, row, |builder|
             builder
@@ -101,41 +112,47 @@ impl Widget for ChannelControls {
         );
 
         Button::with_label("C")
-        .on_press(Event::new(EQEvent::SetKind(5, 7.0)))
-        .build(state, right_col, |builder| builder.set_background_color(Color::rgb(0,50,100)));
+            .on_press(|_, state, button| {
+                button.emit(state, EQEvent::SetKind(5, 7.0));
+            })
+            .build(state, right_col, |builder| builder.set_background_color(Color::rgb(0,50,100)));
         Button::with_label("F")
-        .on_press(Event::new(EQEvent::SetKind(5, 8.0)))
-        .build(state, right_col, |builder| builder.set_background_color(Color::rgb(100,50,50)));
+            .on_press(|_, state, button| {
+                button.emit(state, EQEvent::SetKind(5, 8.0));
+            })
+            .build(state, right_col, |builder| builder.set_background_color(Color::rgb(100,50,50)));
         Button::with_label("I")
-        .on_press(Event::new(EQEvent::SetKind(5, 9.0)))
-        .build(state, right_col, |builder| builder.set_background_color(Color::rgb(0,100,50)));
+            .on_press(|_, state, button| {
+                button.emit(state, EQEvent::SetKind(5, 9.0));
+            })
+            .build(state, right_col, |builder| builder.set_background_color(Color::rgb(0,100,50)));
 
 
         ValueKnob::new("WIDTH", 1.0, 0.1, 24.0)
-        .with_units(UnitsType::dB)
-        .on_changing(|knob, state, entity|{
-            state.insert_event(Event::new(EQEvent::SetWidth(5, knob.value)).target(entity));
-        })
-        .build(state, entity, |builder| 
+            .with_units(UnitsType::dB)
+            .on_changing(|knob, state, entity|{
+                state.insert_event(Event::new(EQEvent::SetWidth(5, knob.value)).target(entity));
+            })
+            .build(state, entity, |builder| 
+                    builder
+                        .set_width(Pixels(80.0))
+                        .set_left(Pixels(10.0))
+                        .set_right(Pixels(10.0))
+                    //.set_background_color(Color::red())
+            );
+
+        ValueKnob::new("SLOPE", 0.0, 0.0, 16.0)
+            .with_units(UnitsType::dB)
+            .on_changing(|knob, state, entity|{
+                state.insert_event(Event::new(EQEvent::SetSlope(5, knob.value)).target(entity));
+            })
+            .build(state, entity, |builder| 
                 builder
                     .set_width(Pixels(80.0))
                     .set_left(Pixels(10.0))
-                    .set_right(Pixels(10.0))
+                    .set_right(Pixels(20.0))
                 //.set_background_color(Color::red())
-        );
-
-        ValueKnob::new("SLOPE", 0.0, 0.0, 16.0)
-        .with_units(UnitsType::dB)
-        .on_changing(|knob, state, entity|{
-            state.insert_event(Event::new(EQEvent::SetSlope(5, knob.value)).target(entity));
-        })
-        .build(state, entity, |builder| 
-            builder
-                .set_width(Pixels(80.0))
-                .set_left(Pixels(10.0))
-                .set_right(Pixels(20.0))
-            //.set_background_color(Color::red())
-        );
+            );
 
         entity
             .set_layout_type(state, LayoutType::Row)

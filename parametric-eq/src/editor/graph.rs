@@ -126,7 +126,7 @@ impl Widget for Graph {
     fn on_draw(&mut self, state: &mut State, entity: Entity, canvas: &mut Canvas<OpenGl>) {
         
         // Skip window
-        if entity == Entity::new(0, 0) {
+        if entity == Entity::root() {
             return;
         }
 
@@ -229,7 +229,7 @@ impl Widget for Graph {
         
         // Apply transformations
         let rotate = state.style.rotate.get(entity).unwrap_or(&0.0);
-        let scaley = state.style.scaley.get(entity).cloned().unwrap_or_default();
+        //let scaley = state.style.scaley.get(entity).cloned().unwrap_or_default();
 
         canvas.save();
         // canvas.translate(posx + width / 2.0, posy + height / 2.0);
@@ -239,7 +239,7 @@ impl Widget for Graph {
         let pt = canvas.transform().inversed().transform_point(posx + width / 2.0, posy + height / 2.0);
         //canvas.translate(posx + width / 2.0, posy + width / 2.0);
         canvas.translate(pt.0, pt.1);
-        canvas.scale(1.0, scaley.0);
+        //canvas.scale(1.0, scaley.0);
         canvas.translate(-pt.0, -pt.1);
 
 
