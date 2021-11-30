@@ -1,14 +1,14 @@
 #[macro_use]
 extern crate vst;
 
-pub mod eq_core;
 mod atomic_f64;
-mod parameter;
-mod eq_params;
 pub mod editor;
+pub mod eq_core;
+mod eq_params;
+mod parameter;
 pub mod util;
 
-use editor::{EQPluginEditor};
+use editor::EQPluginEditor;
 use eq_core::eq::FilterbandStereo;
 use eq_params::{BandParameters, EQEffectParameters};
 
@@ -25,10 +25,9 @@ const FILTER_POLE_COUNT: usize = 16;
 
 struct EQPlugin {
     params: Arc<EQEffectParameters>,
-    sample_rate: Arc<AtomicF64>,    
+    sample_rate: Arc<AtomicF64>,
     editor: Option<EQPluginEditor>,
     filter_bands: Vec<FilterbandStereo>,
-
 }
 
 impl Default for EQPlugin {
@@ -102,16 +101,18 @@ impl Plugin for EQPlugin {
 
     // Here is where the bulk of our audio processing code goes.
     fn process(&mut self, buffer: &mut AudioBuffer<f32>) {
-
         let (input_buffer, output_buffer) = buffer.split();
         let (input_buffer_left, input_buffer_right) = input_buffer.split_at(1);
         let (mut output_buffer_left, mut output_buffer_right) = output_buffer.split_at_mut(1);
 
-        let inputs_stereo = input_buffer_left[0].iter().zip(input_buffer_right[0].iter());
-        let outputs_stereo = output_buffer_left[0].iter_mut().zip(output_buffer_right[0].iter_mut());
+        let inputs_stereo = input_buffer_left[0]
+            .iter()
+            .zip(input_buffer_right[0].iter());
+        let outputs_stereo = output_buffer_left[0]
+            .iter_mut()
+            .zip(output_buffer_right[0].iter_mut());
 
         for (input_pair, output_pair) in inputs_stereo.zip(outputs_stereo) {
-            
             for (i, band) in self.params.bands.iter().enumerate() {
                 self.filter_bands[i].update(
                     band.get_kind(),
@@ -122,7 +123,7 @@ impl Plugin for EQPlugin {
                     self.sample_rate.get(),
                 );
             }
-            
+
             let (input_l, input_r) = input_pair;
             let (output_l, output_r) = output_pair;
 
