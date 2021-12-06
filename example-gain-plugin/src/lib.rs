@@ -35,6 +35,17 @@ baseplug::model! {
     }
 }
 
+// Insert the default preset here.
+impl Default for ExampleGainModel {
+    fn default() -> Self {
+        Self {
+            gain_left: 0.0,
+            gain_right: 0.0,
+            gain_main: 0.0,
+        }
+    }
+}
+
 struct ExampleGainPlug {
     example_gain_dsp: ExampleGainDSP<MAX_BLOCKSIZE>,
 }
@@ -58,17 +69,6 @@ impl ExampleGainPlug {
 }
 
 // --- Boilerplate stuff: ------------------------------------------------------------
-
-// Insert the default preset here.
-impl Default for ExampleGainModel {
-    fn default() -> Self {
-        Self {
-            gain_left: 0.0,
-            gain_right: 0.0,
-            gain_main: 0.0,
-        }
-    }
-}
 
 /// This must stay the same as baseplug's internal `MAX_BLOCKSIZE` (128)
 const MAX_BLOCKSIZE: usize = 128;
