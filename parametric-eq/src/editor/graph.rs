@@ -1,27 +1,32 @@
-
-
-use ringbuf::{Consumer, Producer};
-use triple_buffer::{Input, Output, TripleBuffer};
 use atomic_refcell::AtomicRefCell;
+use femtovg::{renderer::OpenGl, Align, Baseline, Canvas, Paint, Path};
+use ringbuf::{Consumer, Producer};
+use rustfft::{num_complex::Complex, num_traits::real, Fft, FftPlanner};
+use triple_buffer::{Input, Output, TripleBuffer};
 use tuix::*;
-use femtovg::{renderer::OpenGl, Path, Paint, Align, Baseline, Canvas};
-use rustfft::{Fft, FftPlanner, num_complex::Complex, num_traits::real};
 
-use std::{cell::UnsafeCell, sync::Arc};
 use std::cmp::Ordering;
+use std::{cell::UnsafeCell, sync::Arc};
 
-use crate::{eq_core::svf::{Type, SVFCoefficients, ZSample}, eq_params::EQEffectParameters};
-use crate::eq_core::{eq::{FilterKind, FilterbandStereo}};
 use super::EQEvent;
+use crate::eq_core::eq::{FilterKind, FilterbandStereo};
+use crate::{
+    eq_core::svf::{SVFCoefficients, Type, ZSample},
+    eq_params::EQEffectParameters,
+};
 
 use super::super::util::lpsd::lpsd;
 use crate::util::*;
 
 use crate::atomic_f64::AtomicF64;
 
-const frequencies: [f32; 28] = [1.301030, 1.477121, 1.60206, 1.69897, 1.778151, 1.845098, 1.90309, 1.954243, 2.0, 2.30103, 2.477121, 2.60206, 2.69897, 2.778151, 2.845098, 2.90309, 2.954243, 3.0, 3.30103, 3.477121, 3.60206, 3.69897, 3.778151, 3.845098, 3.90309, 3.954243, 4.0, 4.30103];
+const frequencies: [f32; 28] = [
+    1.301030, 1.477121, 1.60206, 1.69897, 1.778151, 1.845098, 1.90309, 1.954243, 2.0, 2.30103,
+    2.477121, 2.60206, 2.69897, 2.778151, 2.845098, 2.90309, 2.954243, 3.0, 3.30103, 3.477121,
+    3.60206, 3.69897, 3.778151, 3.845098, 3.90309, 3.954243, 4.0, 4.30103,
+];
 
-#[derive(Debug,Copy,Clone)]
+#[derive(Debug, Copy, Clone)]
 struct Params {
     kind: FilterKind,
     gain: f32,
@@ -35,23 +40,20 @@ pub struct Graph {
     bode_plots: [[f32; 720]; 4],
 
     params: Arc<EQEffectParameters>,
-    sample_rate: Arc<AtomicF64>,  
-
+    sample_rate: Arc<AtomicF64>,
     //params: [Params; 4],
 }
 
 impl Graph {
     pub fn new(params: Arc<EQEffectParameters>, sample_rate: Arc<AtomicF64>) -> Self {
         Self {
-
             filter_bands: [FilterbandStereo::new(44100.0); 4],
 
             bode_plots: [[0.0; 720]; 4],
 
             params: params.clone(),
-            
-            sample_rate: sample_rate.clone(),
 
+            sample_rate: sample_rate.clone(),
         }
     }
 }
@@ -65,8 +67,7 @@ impl Widget for Graph {
     fn on_event(&mut self, state: &mut State, entity: Entity, event: &mut Event) {
         if let Some(eq_event) = event.message.downcast::<EQEvent>() {
             match eq_event {
-                EQEvent::MovePoint(index,x,y) => {
-
+                EQEvent::MovePoint(index, x, y) => {
                     let xx = *x - 40.0;
                     let yy = *y - 40.0;
 
@@ -74,7 +75,7 @@ impl Widget for Graph {
                     let gain = index_to_amp(yy, 12.0, -12.0, 370.0);
 
                     //println!("{} {}", freq , amp);
-                    
+
                     //self.filters[*index] = SVFCoefficients::<f64>::from_params(Type::PeakingEQ(amp as f64), 44100.0, freq as f64, 1.0).unwrap();
                     //self.params[*index] = Params {kind: self.params[*index].kind, gain: amp, freq: freq, q: 1.0};
                     //self.params.bands[*index].gain.set(gain as f64);
@@ -117,14 +118,12 @@ impl Widget for Graph {
                 //         self.filter_bands[index] = *filter;
                 //     }
                 // }
-
-                _=> {}
+                _ => {}
             }
         }
     }
 
     fn on_draw(&mut self, state: &mut State, entity: Entity, canvas: &mut Canvas<OpenGl>) {
-        
         // Skip window
         if entity == Entity::root() {
             return;
@@ -181,25 +180,49 @@ impl Widget for Graph {
 
         let parent_width = state.data.get_width(parent);
 
-        let border_radius_top_left = match state.style.border_radius_top_left.get(entity).cloned().unwrap_or_default() {
+        let border_radius_top_left = match state
+            .style
+            .border_radius_top_left
+            .get(entity)
+            .cloned()
+            .unwrap_or_default()
+        {
             Units::Pixels(val) => val,
             Units::Percentage(val) => parent_width * val,
             _ => 0.0,
         };
 
-        let border_radius_top_right = match state.style.border_radius_top_right.get(entity).cloned().unwrap_or_default() {
+        let border_radius_top_right = match state
+            .style
+            .border_radius_top_right
+            .get(entity)
+            .cloned()
+            .unwrap_or_default()
+        {
             Units::Pixels(val) => val,
             Units::Percentage(val) => parent_width * val,
             _ => 0.0,
         };
 
-        let border_radius_bottom_left = match state.style.border_radius_bottom_left.get(entity).cloned().unwrap_or_default() {
+        let border_radius_bottom_left = match state
+            .style
+            .border_radius_bottom_left
+            .get(entity)
+            .cloned()
+            .unwrap_or_default()
+        {
             Units::Pixels(val) => val,
             Units::Percentage(val) => parent_width * val,
             _ => 0.0,
         };
 
-        let border_radius_bottom_right = match state.style.border_radius_bottom_right.get(entity).cloned().unwrap_or_default() {
+        let border_radius_bottom_right = match state
+            .style
+            .border_radius_bottom_right
+            .get(entity)
+            .cloned()
+            .unwrap_or_default()
+        {
             Units::Pixels(val) => val,
             Units::Percentage(val) => parent_width * val,
             _ => 0.0,
@@ -213,8 +236,13 @@ impl Widget for Graph {
         let mut border_color: femtovg::Color = border_color.into();
         border_color.set_alphaf(border_color.a * opacity);
 
-
-        let border_width = match state.style.border_width.get(entity).cloned().unwrap_or_default() {
+        let border_width = match state
+            .style
+            .border_width
+            .get(entity)
+            .cloned()
+            .unwrap_or_default()
+        {
             Units::Pixels(val) => val,
             Units::Percentage(val) => parent_width * val,
             _ => 0.0,
@@ -222,11 +250,6 @@ impl Widget for Graph {
 
         //println!("Border Width: {}", border_width);
 
-        
-        
-
-        
-        
         // Apply transformations
         let rotate = state.style.rotate.get(entity).unwrap_or(&0.0);
         //let scaley = state.style.scaley.get(entity).cloned().unwrap_or_default();
@@ -236,12 +259,14 @@ impl Widget for Graph {
         // canvas.rotate(rotate.to_radians());
         // canvas.translate(-(posx + width / 2.0), -(posy + height / 2.0));
 
-        let pt = canvas.transform().inversed().transform_point(posx + width / 2.0, posy + height / 2.0);
+        let pt = canvas
+            .transform()
+            .inversed()
+            .transform_point(posx + width / 2.0, posy + height / 2.0);
         //canvas.translate(posx + width / 2.0, posy + width / 2.0);
         canvas.translate(pt.0, pt.1);
         //canvas.scale(1.0, scaley.0);
         canvas.translate(-pt.0, -pt.1);
-
 
         // Apply Scissor
         let clip_bounds = state.data.get_clip_region(entity);
@@ -272,12 +297,11 @@ impl Widget for Graph {
 
         // Draw Vertical Lines
         // Convert value to pixel position
-        // 30 - 
+        // 30 -
 
         let min = 1.301030;
         let max = 4.30103;
         let range = max - min;
-
 
         for f in &frequencies {
             let t = (f - min) * (width - 80.0) / range;
@@ -286,16 +310,17 @@ impl Widget for Graph {
             path.line_to(posx + 40.5 + t.ceil(), posy + height);
             // let mut paint = Paint::color(femtovg::Color::rgb(95, 87, 87));
             let mut paint = Paint::linear_gradient_stops(
-                0.0, 
-                0.0, 
-                0.0, 
+                0.0,
+                0.0,
+                0.0,
                 height,
                 &[
-                        (0.0, femtovg::Color::rgb(23,18,21)),
-                        (0.1, femtovg::Color::rgb(58, 53, 54)),
-                        (0.9, femtovg::Color::rgb(58, 53, 54)),
-                        (1.0, femtovg::Color::rgb(23,18,21))
-                    ]);
+                    (0.0, femtovg::Color::rgb(23, 18, 21)),
+                    (0.1, femtovg::Color::rgb(58, 53, 54)),
+                    (0.9, femtovg::Color::rgb(58, 53, 54)),
+                    (1.0, femtovg::Color::rgb(23, 18, 21)),
+                ],
+            );
             paint.set_line_width(1.0);
             canvas.stroke_path(&mut path, paint);
         }
@@ -307,26 +332,26 @@ impl Widget for Graph {
             path.line_to(posx + width, posy + 40.5 + t.ceil());
             //let mut paint = Paint::color(femtovg::Color::rgb(95, 87, 87));
             let mut paint = Paint::linear_gradient_stops(
-                0.0, 
-                0.0, 
+                0.0,
+                0.0,
                 width,
-                0.0, 
+                0.0,
                 &[
-                        (0.0, femtovg::Color::rgb(23,18,21)),
-                        (0.1, femtovg::Color::rgb(58, 53, 54)),
-                        (0.9, femtovg::Color::rgb(58, 53, 54)),
-                        (1.0, femtovg::Color::rgb(23,18,21))
-                    ]);
+                    (0.0, femtovg::Color::rgb(23, 18, 21)),
+                    (0.1, femtovg::Color::rgb(58, 53, 54)),
+                    (0.9, femtovg::Color::rgb(58, 53, 54)),
+                    (1.0, femtovg::Color::rgb(23, 18, 21)),
+                ],
+            );
             paint.set_line_width(1.0);
             canvas.stroke_path(&mut path, paint);
-
         }
 
         // 30 Hz Label
         //let t = (width - 40.0) / range;
         let mut path = Path::new();
         path.rect(posx + 30.0, posy + 10.0, 40.0, 14.0);
-        let mut paint = Paint::color(femtovg::Color::rgb(23,18,21));
+        let mut paint = Paint::color(femtovg::Color::rgb(23, 18, 21));
         canvas.fill_path(&mut path, paint);
         let mut label_paint = Paint::color(femtovg::Color::rgb(179, 172, 172));
         label_paint.set_text_align(femtovg::Align::Center);
@@ -338,7 +363,7 @@ impl Widget for Graph {
         let t = (2.0 - min) * (width - 80.0) / range;
         let mut path = Path::new();
         path.rect(posx + 30.0 + t, posy + 10.0, 40.0, 14.0);
-        let mut paint = Paint::color(femtovg::Color::rgb(23,18,21));
+        let mut paint = Paint::color(femtovg::Color::rgb(23, 18, 21));
         canvas.fill_path(&mut path, paint);
         let mut label_paint = Paint::color(femtovg::Color::rgb(179, 172, 172));
         label_paint.set_text_align(femtovg::Align::Center);
@@ -350,7 +375,7 @@ impl Widget for Graph {
         let t = (3.0 - min) * (width - 80.0) / range;
         let mut path = Path::new();
         path.rect(posx + 30.0 + t, posy + 10.0, 40.0, 14.0);
-        let mut paint = Paint::color(femtovg::Color::rgb(23,18,21));
+        let mut paint = Paint::color(femtovg::Color::rgb(23, 18, 21));
         canvas.fill_path(&mut path, paint);
         let mut label_paint = Paint::color(femtovg::Color::rgb(179, 172, 172));
         label_paint.set_text_align(femtovg::Align::Center);
@@ -374,7 +399,7 @@ impl Widget for Graph {
         let t = width - 80.0;
         let mut path = Path::new();
         path.rect(posx + 30.0 + t, posy + 10.0, 40.0, 14.0);
-        let mut paint = Paint::color(femtovg::Color::rgb(23,18,21));
+        let mut paint = Paint::color(femtovg::Color::rgb(23, 18, 21));
         canvas.fill_path(&mut path, paint);
         let mut label_paint = Paint::color(femtovg::Color::rgb(179, 172, 172));
         label_paint.set_text_align(femtovg::Align::Center);
@@ -386,7 +411,7 @@ impl Widget for Graph {
         let t = 0.0 * (height - 80.0) / 4.0;
         let mut path = Path::new();
         path.rect(posx, posy + height - 55.0, 40.0, 14.0);
-        let mut paint = Paint::color(femtovg::Color::rgb(23,18,21));
+        let mut paint = Paint::color(femtovg::Color::rgb(23, 18, 21));
         canvas.fill_path(&mut path, paint);
         let mut label_paint = Paint::color(femtovg::Color::rgb(179, 172, 172));
         label_paint.set_text_align(femtovg::Align::Center);
@@ -398,7 +423,7 @@ impl Widget for Graph {
         let t = 1.0 * (height - 80.0) / 4.0;
         let mut path = Path::new();
         path.rect(posx, posy + height - 55.0 - t, 40.0, 14.0);
-        let mut paint = Paint::color(femtovg::Color::rgb(23,18,21));
+        let mut paint = Paint::color(femtovg::Color::rgb(23, 18, 21));
         canvas.fill_path(&mut path, paint);
         let mut label_paint = Paint::color(femtovg::Color::rgb(179, 172, 172));
         label_paint.set_text_align(femtovg::Align::Center);
@@ -410,7 +435,7 @@ impl Widget for Graph {
         let t = 2.0 * (height - 80.0) / 4.0;
         let mut path = Path::new();
         path.rect(posx, posy + height - 55.0 - t, 40.0, 14.0);
-        let mut paint = Paint::color(femtovg::Color::rgb(23,18,21));
+        let mut paint = Paint::color(femtovg::Color::rgb(23, 18, 21));
         canvas.fill_path(&mut path, paint);
         let mut label_paint = Paint::color(femtovg::Color::rgb(179, 172, 172));
         label_paint.set_text_align(femtovg::Align::Center);
@@ -422,7 +447,7 @@ impl Widget for Graph {
         let t = 3.0 * (height - 80.0) / 4.0;
         let mut path = Path::new();
         path.rect(posx, posy + height - 55.0 - t, 40.0, 14.0);
-        let mut paint = Paint::color(femtovg::Color::rgb(23,18,21));
+        let mut paint = Paint::color(femtovg::Color::rgb(23, 18, 21));
         canvas.fill_path(&mut path, paint);
         let mut label_paint = Paint::color(femtovg::Color::rgb(179, 172, 172));
         label_paint.set_text_align(femtovg::Align::Center);
@@ -434,18 +459,13 @@ impl Widget for Graph {
         let t = 4.0 * (height - 80.0) / 4.0;
         let mut path = Path::new();
         path.rect(posx, posy + height - 55.0 - t, 40.0, 14.0);
-        let mut paint = Paint::color(femtovg::Color::rgb(23,18,21));
+        let mut paint = Paint::color(femtovg::Color::rgb(23, 18, 21));
         canvas.fill_path(&mut path, paint);
         let mut label_paint = Paint::color(femtovg::Color::rgb(179, 172, 172));
         label_paint.set_text_align(femtovg::Align::Center);
         label_paint.set_text_baseline(Baseline::Middle);
         label_paint.set_font_size(12.0);
         canvas.fill_text(posx + 20.0, posy + height - 48.0 - t, "12 dB", label_paint);
-
-
-
-        
-
 
         // let mut consumer = self.filterband_consumer.borrow_mut();
         // consumer.update();
@@ -467,21 +487,16 @@ impl Widget for Graph {
         //     self.filter_bands[index] = *filter;
         // }
 
-        
-        
         // Draw Spectrum (TODO)
 
         // let mut path = Path::new();
         // path.move_to(posx + 40.5, posy + height);
-
-
 
         // let mut consumer = self.consumer.borrow_mut();
 
         // consumer.update();
 
         // let output = consumer.output_buffer();
-
 
         // let real_buffer = lpsd(&output, 30.0, 20000.0, 720, 100, 2, 44100.0, 0.5);
 
@@ -511,7 +526,7 @@ impl Widget for Graph {
         // //     path.line_to(posx + 40.5 + t as f32, posy + height + 30.0 - (db_val * height));
         // //     self.prev_frame[i] = sample;
         // // }
-        
+
         // for i in 0..720 {
 
         //     //let log_freq = log_index(i as f32, min, max);
@@ -538,7 +553,6 @@ impl Widget for Graph {
         // paint.set_line_join(femtovg::LineJoin::Bevel);
         // canvas.stroke_path(&mut path, paint);
 
-
         // Draw bode plot
         let height_span = height - 80.0;
 
@@ -546,12 +560,7 @@ impl Widget for Graph {
 
         let mut y_values = vec![0.0f32; 720];
 
-
-        
         for (index, band) in self.params.bands.iter().enumerate() {
-
-            
-
             let mut new_band = FilterbandStereo::new(sample_rate);
             new_band.update(
                 band.get_kind(),
@@ -575,23 +584,31 @@ impl Widget for Graph {
                 //let amp = self.filter_bands[index].get_amplitude(freq as f64) as f32;
                 //let amp_db = 20.0 * amp.log10().max(-12.0) / 12.0;
                 //let amp_db = self.bode_plots[index][i];
-                fill_path.line_to(posx + 40.5 + i as f32, posy + 40.0 + height_span/2.0 - amp_db * height_span/2.0);
+                fill_path.line_to(
+                    posx + 40.5 + i as f32,
+                    posy + 40.0 + height_span / 2.0 - amp_db * height_span / 2.0,
+                );
                 if i == 0 {
-                    stroke_path.move_to(posx + 40.5 + i as f32, posy + 40.0 + height_span/2.0 - amp_db * height_span/2.0);
+                    stroke_path.move_to(
+                        posx + 40.5 + i as f32,
+                        posy + 40.0 + height_span / 2.0 - amp_db * height_span / 2.0,
+                    );
                 } else {
-                    stroke_path.line_to(posx + 40.5 + i as f32, posy + 40.0 + height_span/2.0 - amp_db * height_span/2.0);
+                    stroke_path.line_to(
+                        posx + 40.5 + i as f32,
+                        posy + 40.0 + height_span / 2.0 - amp_db * height_span / 2.0,
+                    );
                 }
             }
-            fill_path.line_to(posx + 40.5 + 720.0,posy + 40.0 + height_span / 2.0);
+            fill_path.line_to(posx + 40.5 + 720.0, posy + 40.0 + height_span / 2.0);
             fill_path.line_to(posx + 40.5, posy + 40.0 + height_span / 2.0);
             path.close();
 
-            
             let paint = if index == 0 {
                 Paint::color(femtovg::Color::rgba(64, 67, 246, 126))
             } else if index == 1 {
                 Paint::color(femtovg::Color::rgba(180, 67, 246, 126))
-            } else if index == 2{
+            } else if index == 2 {
                 Paint::color(femtovg::Color::rgba(246, 67, 246, 126))
             } else {
                 Paint::color(femtovg::Color::rgba(140, 246, 67, 126))
@@ -613,9 +630,6 @@ impl Widget for Graph {
             canvas.stroke_path(&mut stroke_path, paint);
         }
 
-
-
-
         // let mut path = Path::new();
         // (0..720).map(|index| index_to_freq(index as f32, min, max, 720.0)).enumerate().map(|(i, f)| {
         //     let amp_db = (20.0 * self.filter_bands.iter().fold(0.0, |hf, h| hf * h.get_amplitude(f as f64))
@@ -629,7 +643,7 @@ impl Widget for Graph {
         //     }
 
         // });
-        
+
         // let mut path = Path::new();
         // for i in 0..720 {
         //     let freq = index_to_freq(i as f32, min, max, 720.0);
@@ -639,40 +653,40 @@ impl Widget for Graph {
         //     let amp2 = self.filters[2].get_bode_sample(z).norm() as f32;
 
         //     let amp = amp0 * amp1 * amp2;
-            
 
         //     let amp = (amp0 * amp1 * amp2 * amp3);
-            
+
         //     let amp_db = 20.0 * amp.log10().max(-12.0) / 12.0;
         //     if i == 0 {
         //         path.move_to(posx + 40.5 + i as f32, posy + 40.0 + height_span/2.0 - amp_db * height_span/2.0);
         //     } else {
         //         path.line_to(posx + 40.5 + i as f32, posy + 40.0 + height_span/2.0 - amp_db * height_span/2.0);
         //     }
-            
+
         // }
-        
 
         let mut path = Path::new();
         for i in 0..720 {
-
             let amp_db = y_values[i];
-            
+
             if i == 0 {
-                path.move_to(posx + 40.5 + i as f32, posy + 40.0 + height_span/2.0 - amp_db * height_span/2.0);
+                path.move_to(
+                    posx + 40.5 + i as f32,
+                    posy + 40.0 + height_span / 2.0 - amp_db * height_span / 2.0,
+                );
             } else {
-                path.line_to(posx + 40.5 + i as f32, posy + 40.0 + height_span/2.0 - amp_db * height_span/2.0);
+                path.line_to(
+                    posx + 40.5 + i as f32,
+                    posy + 40.0 + height_span / 2.0 - amp_db * height_span / 2.0,
+                );
             }
-            
         }
-        
 
         let mut paint = Paint::color(femtovg::Color::rgb(246, 67, 64));
         paint.set_line_join(femtovg::LineJoin::Bevel);
         paint.set_line_width(2.0);
         canvas.stroke_path(&mut path, paint);
     }
-
 }
 
 // Control Point
@@ -712,7 +726,8 @@ impl ControlPoint {
     }
 
     pub fn on_press<F>(mut self, message: F) -> Self
-        where F: 'static + Fn(&Self, &mut State, Entity),
+    where
+        F: 'static + Fn(&Self, &mut State, Entity),
     {
         self.on_press = Some(Box::new(message));
 
@@ -720,7 +735,8 @@ impl ControlPoint {
     }
 
     pub fn on_release<F>(mut self, message: F) -> Self
-        where F: 'static + Fn(&Self, &mut State, Entity),
+    where
+        F: 'static + Fn(&Self, &mut State, Entity),
     {
         self.on_release = Some(Box::new(message));
 
@@ -728,7 +744,8 @@ impl ControlPoint {
     }
 
     pub fn on_move<F>(mut self, message: F) -> Self
-        where F: 'static + Fn(&Self, &mut State, Entity),
+    where
+        F: 'static + Fn(&Self, &mut State, Entity),
     {
         self.on_move = Some(Box::new(message));
 
@@ -756,8 +773,10 @@ impl Widget for ControlPoint {
                     if event.target == entity {
                         self.moving = true;
                         state.capture(entity);
-                        self.pos_down_left = state.mouse.left.pos_down.0 - state.data.get_posx(entity);
-                        self.pos_down_top = state.mouse.left.pos_down.1 - state.data.get_posy(entity);
+                        self.pos_down_left =
+                            state.mouse.left.pos_down.0 - state.data.get_posx(entity);
+                        self.pos_down_top =
+                            state.mouse.left.pos_down.1 - state.data.get_posy(entity);
 
                         let parent = state.hierarchy.get_parent(entity).unwrap();
                         let parent_left = state.data.get_posx(parent);
@@ -766,8 +785,10 @@ impl Widget for ControlPoint {
                         let width = state.data.get_width(entity);
                         let height = state.data.get_height(entity);
 
-                        self.px = state.mouse.left.pos_down.0 - parent_left - self.pos_down_left + width / 2.0;
-                        self.py = state.mouse.left.pos_down.1 - parent_top - self.pos_down_top + height / 2.0;
+                        self.px = state.mouse.left.pos_down.0 - parent_left - self.pos_down_left
+                            + width / 2.0;
+                        self.py = state.mouse.left.pos_down.1 - parent_top - self.pos_down_top
+                            + height / 2.0;
 
                         self.px = self.px.clamp(self.minx, self.maxx);
                         self.py = self.py.clamp(self.miny, self.maxy);
@@ -798,8 +819,7 @@ impl Widget for ControlPoint {
 
                             let width = state.data.get_width(entity);
                             let height = state.data.get_height(entity);
-                            
-                        
+
                             self.px = *x - parent_left - self.pos_down_left + width / 2.0;
                             self.py = *y - parent_top - self.pos_down_top + height / 2.0;
 
@@ -813,7 +833,7 @@ impl Widget for ControlPoint {
                             if let Some(on_move) = &self.on_move {
                                 (on_move)(self, state, entity);
                             }
-                        
+
                             state.insert_event(
                                 Event::new(WindowEvent::Redraw).target(Entity::root()),
                             );
@@ -821,10 +841,8 @@ impl Widget for ControlPoint {
                     }
                 }
 
-                _=> {}
+                _ => {}
             }
         }
     }
-
-
 }

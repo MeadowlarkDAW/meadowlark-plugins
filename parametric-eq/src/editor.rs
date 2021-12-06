@@ -1,5 +1,3 @@
-
-
 use vst::editor::Editor;
 
 use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
@@ -10,11 +8,11 @@ use crate::EQEffectParameters;
 
 use tuix::*;
 
+mod channel_controls;
 mod equi;
 mod graph;
-mod channel_controls;
 
-use equi::{EQUI, EQEvent};
+use equi::{EQEvent, EQUI};
 
 use std::sync::Arc;
 
@@ -48,7 +46,9 @@ impl Editor for EQPluginEditor {
         let params = self.params.clone();
         let sample_rate = self.sample_rate.clone();
 
-        let window_description = WindowDescription::new().with_title("EQ PLUGIN").with_inner_size(800, 600);
+        let window_description = WindowDescription::new()
+            .with_title("EQ PLUGIN")
+            .with_inner_size(800, 600);
         let app = Application::new(window_description, move |state, window| {
             state.add_theme(THEME);
 

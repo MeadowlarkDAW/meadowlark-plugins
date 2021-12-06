@@ -3,8 +3,7 @@ use crate::FILTER_POLE_COUNT;
 use super::eq_core::eq::FilterKind;
 use super::parameter::Parameter;
 
-use vst::plugin::{PluginParameters};
-
+use vst::plugin::PluginParameters;
 
 pub struct BandParameters {
     pub kind: Parameter,

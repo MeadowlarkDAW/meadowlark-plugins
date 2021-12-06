@@ -1,7 +1,5 @@
 use crate::{atomic_f64::AtomicF64, eq_core::units::Units};
 
-
-
 pub struct Parameter {
     name: String,
     normalized_value: AtomicF64,

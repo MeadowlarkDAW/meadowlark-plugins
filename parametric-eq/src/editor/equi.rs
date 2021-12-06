@@ -1,11 +1,10 @@
-
 use tuix::*;
 
-use femtovg::{renderer::OpenGl, Path, Paint, Align, Baseline, Canvas};
+use femtovg::{renderer::OpenGl, Align, Baseline, Canvas, Paint, Path};
 
-use super::graph::Graph;
-use super::graph::ControlPoint;
 use super::channel_controls::ChannelControls;
+use super::graph::ControlPoint;
+use super::graph::Graph;
 
 use crate::util::*;
 
@@ -29,7 +28,7 @@ pub enum EQEvent {
 
 pub struct EQUI {
     params: Arc<EQEffectParameters>,
-    sample_rate: Arc<AtomicF64>,    
+    sample_rate: Arc<AtomicF64>,
     selected_control: usize,
     control_points: [Entity; 4],
     controls: Entity,
@@ -60,19 +59,23 @@ impl Widget for EQUI {
             builder
                 .set_width(Stretch(1.0))
                 .set_height(Pixels(30.0))
-                .set_background_color(Color::rgb(32,29,32))
+                .set_background_color(Color::rgb(32, 29, 32))
                 .set_child_space(Stretch(1.0))
                 .set_text("Header")
         });
 
-        let graph = Graph::new(self.params.clone(), self.sample_rate.clone()).build(state, entity, |builder| {
-            builder
-                .set_width(Stretch(1.0))
-                .set_height(Stretch(1.0))
-                .set_background_color(Color::rgb(23,18,21))
-                .set_child_space(Stretch(1.0))
-                .set_text("Graph")
-        });
+        let graph = Graph::new(self.params.clone(), self.sample_rate.clone()).build(
+            state,
+            entity,
+            |builder| {
+                builder
+                    .set_width(Stretch(1.0))
+                    .set_height(Stretch(1.0))
+                    .set_background_color(Color::rgb(23, 18, 21))
+                    .set_child_space(Stretch(1.0))
+                    .set_text("Graph")
+            },
+        );
 
         self.graph = graph;
 
@@ -80,62 +83,82 @@ impl Widget for EQUI {
             builder
                 .set_width(Stretch(1.0))
                 .set_height(Pixels(120.0))
-                .set_background_color(Color::rgb(32,29,32))
+                .set_background_color(Color::rgb(32, 29, 32))
                 .set_child_left(Stretch(1.0))
                 .set_child_right(Stretch(1.0))
         });
 
-        let controls = ChannelControls::new()
-        .build(state, controls, |builder|
-            builder
-                .set_width(Units::Auto)
-                .set_height(Stretch(1.0))
-        );
+        let controls = ChannelControls::new().build(state, controls, |builder| {
+            builder.set_width(Units::Auto).set_height(Stretch(1.0))
+        });
 
         self.controls = controls;
 
         let control_point = ControlPoint::new("1")
-        .on_press(|_, state, entity| {state.insert_event(Event::new(EQEvent::StartDrag(0)).target(entity));})
-        .on_release(|_, state, entity| {state.insert_event(Event::new(EQEvent::StopDrag(0)).target(entity));})
-        .on_move(move |knob, state, entity| {
-            //state.insert_event(Event::new(EQEvent::MovePoint(0,knob.px,knob.py)).direct(graph));
-            state.insert_event(Event::new(EQEvent::MovePoint(0,knob.px,knob.py)).target(controls));
-
-        })
-        .build(state, graph, |builder| builder);
+            .on_press(|_, state, entity| {
+                state.insert_event(Event::new(EQEvent::StartDrag(0)).target(entity));
+            })
+            .on_release(|_, state, entity| {
+                state.insert_event(Event::new(EQEvent::StopDrag(0)).target(entity));
+            })
+            .on_move(move |knob, state, entity| {
+                //state.insert_event(Event::new(EQEvent::MovePoint(0,knob.px,knob.py)).direct(graph));
+                state.insert_event(
+                    Event::new(EQEvent::MovePoint(0, knob.px, knob.py)).target(controls),
+                );
+            })
+            .build(state, graph, |builder| builder);
 
         self.control_points[0] = control_point;
 
         let control_point = ControlPoint::new("2")
-        .on_press(|_, state, entity| {state.insert_event(Event::new(EQEvent::StartDrag(1)).target(entity));})
-        .on_release(|_, state, entity| {state.insert_event(Event::new(EQEvent::StopDrag(1)).target(entity));})
-        .on_move(move |knob, state, entity| {
-            //state.insert_event(Event::new(EQEvent::MovePoint(1,knob.px,knob.py)).direct(graph));
-            state.insert_event(Event::new(EQEvent::MovePoint(1,knob.px,knob.py)).target(controls));
-        })
-        .build(state, graph, |builder| builder);
+            .on_press(|_, state, entity| {
+                state.insert_event(Event::new(EQEvent::StartDrag(1)).target(entity));
+            })
+            .on_release(|_, state, entity| {
+                state.insert_event(Event::new(EQEvent::StopDrag(1)).target(entity));
+            })
+            .on_move(move |knob, state, entity| {
+                //state.insert_event(Event::new(EQEvent::MovePoint(1,knob.px,knob.py)).direct(graph));
+                state.insert_event(
+                    Event::new(EQEvent::MovePoint(1, knob.px, knob.py)).target(controls),
+                );
+            })
+            .build(state, graph, |builder| builder);
 
         self.control_points[1] = control_point;
 
         let control_point = ControlPoint::new("3")
-        .on_press(|_, state, entity| {state.insert_event(Event::new(EQEvent::StartDrag(2)).target(entity));})
-        .on_release(|_, state, entity| {state.insert_event(Event::new(EQEvent::StopDrag(2)).target(entity));})
-        .on_move(move |knob, state, entity| {
-            //state.insert_event(Event::new(EQEvent::MovePoint(2,knob.px,knob.py)).direct(graph));
-            state.insert_event(Event::new(EQEvent::MovePoint(2,knob.px,knob.py)).target(controls));
-        })
-        .build(state, graph, |builder| builder);
+            .on_press(|_, state, entity| {
+                state.insert_event(Event::new(EQEvent::StartDrag(2)).target(entity));
+            })
+            .on_release(|_, state, entity| {
+                state.insert_event(Event::new(EQEvent::StopDrag(2)).target(entity));
+            })
+            .on_move(move |knob, state, entity| {
+                //state.insert_event(Event::new(EQEvent::MovePoint(2,knob.px,knob.py)).direct(graph));
+                state.insert_event(
+                    Event::new(EQEvent::MovePoint(2, knob.px, knob.py)).target(controls),
+                );
+            })
+            .build(state, graph, |builder| builder);
 
         self.control_points[2] = control_point;
 
         let control_point = ControlPoint::new("4")
-        .on_press(|_, state, entity| {state.insert_event(Event::new(EQEvent::StartDrag(3)).target(entity));})
-        .on_release(|_, state, entity| {state.insert_event(Event::new(EQEvent::StopDrag(3)).target(entity));})
-        .on_move(move |knob, state, entity| {
-            //state.insert_event(Event::new(EQEvent::MovePoint(3,knob.px,knob.py)).direct(graph));
-            state.insert_event(Event::new(EQEvent::MovePoint(3,knob.px,knob.py)).target(controls));
-        })
-        .build(state, graph, |builder| builder);
+            .on_press(|_, state, entity| {
+                state.insert_event(Event::new(EQEvent::StartDrag(3)).target(entity));
+            })
+            .on_release(|_, state, entity| {
+                state.insert_event(Event::new(EQEvent::StopDrag(3)).target(entity));
+            })
+            .on_move(move |knob, state, entity| {
+                //state.insert_event(Event::new(EQEvent::MovePoint(3,knob.px,knob.py)).direct(graph));
+                state.insert_event(
+                    Event::new(EQEvent::MovePoint(3, knob.px, knob.py)).target(controls),
+                );
+            })
+            .build(state, graph, |builder| builder);
 
         self.control_points[3] = control_point;
 
@@ -145,7 +168,6 @@ impl Widget for EQUI {
     fn on_event(&mut self, state: &mut State, entity: Entity, event: &mut Event) {
         if let Some(eq_event) = event.message.downcast() {
             match eq_event {
-
                 EQEvent::StartDrag(index) => {
                     self.selected_control = *index;
                     self.dragging = true;
@@ -157,7 +179,6 @@ impl Widget for EQUI {
 
                 EQEvent::MovePoint(index, x, y) => {
                     if self.dragging {
-
                         let xx = *x - 40.0;
                         let yy = *y - 40.0;
 
@@ -171,7 +192,6 @@ impl Widget for EQUI {
                 }
 
                 EQEvent::SetFreq(index, freq) => {
-
                     let idx = if *index == 5 {
                         self.selected_control
                     } else {
@@ -188,7 +208,6 @@ impl Widget for EQUI {
                 }
 
                 EQEvent::SetGain(index, gain) => {
-
                     let idx = if *index == 5 {
                         self.selected_control
                     } else {
@@ -251,15 +270,14 @@ impl Widget for EQUI {
                 //         _=> {}
                 //     }
                 // }
-
-                _=> {}
+                _ => {}
             }
         }
     }
 
     fn on_draw(&mut self, state: &mut State, entity: Entity, canvas: &mut Canvas<OpenGl>) {
         for (index, band) in self.params.bands.iter().enumerate() {
-            //state.insert_event(Event::new(EQEvent::SetGain(index, band.gain.get() as f32)).target(self.controls)); 
+            //state.insert_event(Event::new(EQEvent::SetGain(index, band.gain.get() as f32)).target(self.controls));
             let gain = self.params.bands[index].gain.get();
             let freq = self.params.bands[index].freq.get();
 
@@ -267,26 +285,26 @@ impl Widget for EQUI {
             let max = 4.3013;
             let x = freq_to_index(freq as f32, min, max, 720.0);
             let y = amp_to_index(gain as f32, 12.0, -12.0, 370.0);
-            
+
             self.control_points[index].set_left(state, Pixels(x + 30.0));
             self.control_points[index].set_top(state, Pixels(y + 30.0));
 
             if !self.dragging && index == self.selected_control {
-                
-                
                 // Doesn't work for some reason
                 //state.data.set_posx(self.control_points[index], x + 30.0);
                 //state.data.set_posy(self.control_points[index], y + 30.0);
 
-                state.insert_event(Event::new(EQEvent::SetGain(index, gain as f32)).direct(self.controls));
-                state.insert_event(Event::new(EQEvent::SetFreq(index, freq as f32)).direct(self.controls));
+                state.insert_event(
+                    Event::new(EQEvent::SetGain(index, gain as f32)).direct(self.controls),
+                );
+                state.insert_event(
+                    Event::new(EQEvent::SetFreq(index, freq as f32)).direct(self.controls),
+                );
             }
-            
 
             // Set the position directly to avoid a frame delay
-            
+
             //self.header.set_text(state, &gain.to_string());
-            
         }
     }
 }
