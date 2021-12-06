@@ -59,16 +59,13 @@ impl ExampleGainPlug {
 
 // --- Boilerplate stuff: ------------------------------------------------------------
 
-// Baseplug requires us to derive Default for the model.
+// Insert the default preset here.
 impl Default for ExampleGainModel {
     fn default() -> Self {
         Self {
-            // "gain" is converted from dB to coefficient in the parameter handling code,
-            // so in the model here it's a coeff.
-            // -0dB == 1.0
-            gain_left: 1.0,
-            gain_right: 1.0,
-            gain_main: 1.0,
+            gain_left: 0.0,
+            gain_right: 0.0,
+            gain_main: 0.0,
         }
     }
 }
