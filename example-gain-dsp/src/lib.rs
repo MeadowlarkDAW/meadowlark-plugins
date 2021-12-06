@@ -90,9 +90,7 @@ impl<const MAX_BLOCKSIZE: usize> ExampleGainDSP<MAX_BLOCKSIZE> {
         let gain_right = self.gain_right.smoothed(frames);
         let gain_main = self.gain_main.smoothed(frames);
 
-        if (!gain_left.is_smoothing() && !gain_right.is_smoothing() && !gain_main.is_smoothing())
-            || false
-        {
+        if !gain_left.is_smoothing() && !gain_right.is_smoothing() && !gain_main.is_smoothing() {
             // If nothing is being smoothed then we can optimize by using a constant gain factor
             // (this should auto-vectorize nicely).
             let left_gain = gain_left[0] * gain_main[0];
