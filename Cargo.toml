@@ -10,7 +10,7 @@ publish = false
 [workspace]
 members = [
     "example-gain-dsp",
-    "example-gain-vst",
+    "example-gain-plugin",
     "parametric-eq",
 ]
 
