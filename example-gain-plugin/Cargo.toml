@@ -10,6 +10,6 @@ crate-type = ["cdylib"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-example-gain-dsp = { path = "../example-gain-dsp", features = ["portable-simd"] }
+example-gain-dsp = { path = "../example-gain-dsp" }
 baseplug = { git = "https://github.com/wrl/baseplug.git", rev = "f369427e9f8e0fed5cbfdddf08b2ccc145dd7ceb" } 
 serde = { version = "1.0", features = ["derive"] }
