@@ -1,48 +1,103 @@
+//! The goal here is to separate the pure DSP of a plugin into its own separate crate.
+//! This makes it easier to reuse for any plugin format with any frontend someone may
+//! choose.
+//!
 //! Remember that the goal of this plugin project is **NOT** to create a reusable
 //! shared DSP library (I believe that would be more hassle than it is worth). The
-//! goal of this plugin project is to simply provide standalone "plugins", each with
-//! their own optimized DSP implementation. We are however free to reference and
-//! copy-paste portions of DSP across plugins as we see fit (as long as the other
-//! plugins are also GPLv3).
+//! goal is to have each plugin have their own standalone and optimized DSP. We are
+//! however free to reference and copy-paste portions of DSP across plugins as we see
+//! fit (as long as the other plugins are also GPLv3).
+//! 
+//! Refer to the DSP Design Doc for more details:
+//! https://github.com/MeadowlarkDAW/Meadowlark/blob/main/DSP_DESIGN_DOC.md
 
-#![cfg_attr(feature = "portable-simd", feature(portable_simd))]
-
-#[cfg(feature = "portable-simd")]
-use std::simd::{f32x2, LaneCount, Simd, SupportedLaneCount};
-
+// We will use some standard types defined in this crate in this plugin project.
 use rusty_daw_core::{
     ParamF32, ParamF32UiHandle, SampleRate, Unit, DEFAULT_DB_GRADIENT, DEFAULT_SMOOTH_SECS,
 };
 
+/// Prefer to use block-based processing. For this plugin we will process in block sizes
+/// of 128 samples. Based on the plugin, somewhere between 32 samples and 256 samples is
+/// usually the most performant. (That may seem small but it's actually the sweet spot
+/// to avoid CPU cache misses when doing block-based DSP processing. Always profile!)
+const MAX_BLOCKSIZE: usize = 128;
+
 /// This struct will live in the realtime thread.
 ///
-/// Here you may use whatever lock-free method for state synchronization from
-/// "UiHandle" you need, such as lock-free ring buffers or atomics. (Note that
-/// the `ParamF32` struct internally uses an atomic.)
+/// Here you may use whatever lock-free method for state synchronization from the
+/// "UiHandle" counterpart of the plugin as you see fit, such as lock-free ring buffers
+/// or atomics. (In this case we are using the `ParamF32` struct which internally uses an
+/// atomic for state syncronization.)
 ///
 /// If you need to send data allocated on the heap to the rt thread, prefer to
 /// use the smart pointers in the `basedrop` crate which automatically
 /// sends data dropped on the rt thread to a "garbage collection" thread.
-pub struct ExampleGainDSP<const MAX_BLOCKSIZE: usize> {
+pub struct ExampleGainDSP {
+    /// The `ParamF32` type in `rusty_daw_core` provides convenient auto-smoothing of
+    /// parameters as well as auto-syncing with its `ParamF32UiHandle` counterpart
+    /// in the UI thread.
+    /// 
     pub gain: ParamF32<MAX_BLOCKSIZE>,
 }
 
-impl<const MAX_BLOCKSIZE: usize> ExampleGainDSP<MAX_BLOCKSIZE> {
+/// This struct will live in the host/UI thread.
+/// 
+/// It is meant as a way for the host/UI to manipulate and synchronize state to/from the
+/// audio-thread counterpart.
+pub struct ExampleGainUiHandle {
+    pub gain: ParamF32UiHandle,
+}
+
+/// This struct defines a preset for the plugin.
+#[derive(Debug, Clone, Copy)]
+pub struct ExampleGainPreset {
+    // It doesn't matter if you use normalized values for the preset or the actual values
+    // for the preset. Just remember to keep it consistent across the plugin.
+    pub gain_db: f32,
+}
+
+impl ExampleGainDSP {
+    /// The constructor of the DSP struct should always return itself along with the
+    /// "UIHandle" counterpart that is sent to the UI thread for syncronization.
     pub fn new(
+        preset: &ExampleGainPreset,
         // We don't really need to have `min_db` and `max_db` be parameters since this
         // is meant to be a standalone plugin and not a shared DSP library, but the
         // option is here if we want.
         min_db: f32,
         max_db: f32,
-        initial_db: f32,
         sample_rate: SampleRate,
-    ) -> (ExampleGainDSP<MAX_BLOCKSIZE>, ExampleGainUiHandle) {
+    ) -> (ExampleGainDSP, ExampleGainUiHandle) {
+        // Construct a parameter.
+        //
+        // If your preset uses normalized values, use `ParamF32::from_normalized()` instead.
         let (gain, gain_handle) = ParamF32::from_value(
-            initial_db,
-            min_db,
-            max_db,
+            // The initial value of this parameter. This will automatically be clamped in the range
+            // `[min_db, max_db]` defined below.
+            preset.gain_db,
+            min_db,  // The minimum value of this parameter.
+            max_db,  // The maximum value of this parameter.
+            // The "gradient" defines the mapping curve from the knob/slider presented in
+            // the UI to the value of the parameter. This makes some parameters feel more "natural"
+            // to use.
+            //
+            // For example in parameters that deal with decibels we generally want the top
+            // end of the knob/slider to make small increments to the db value (i.e a tick going
+            // from -1.0db to -1.1db) and the bottom end of the knob/slider to make large increments
+            // to the db value (i.e a tick going from -80.0db to -85.0db).
             DEFAULT_DB_GRADIENT,
+            // The "unit" defines how the value of the parameter should be presented in the
+            // audio-thread code.
+            //
+            // For parameters that deal with decibels, we generally want to process
+            // the value in raw amplitude and not the value in decibels. Setting this to `Unit::Decibels`
+            // sets this struct to automatically do this for use.
+            //
+            // Use `Unit::Generic` if you want the audio thread to recieve the same value as the
+            // parameter itself.
             Unit::Decibels,
+            // This defines the amount of smoothing this parameter should use. This default value
+            // should be fine in most cases.
             DEFAULT_SMOOTH_SECS,
             sample_rate,
         );
@@ -61,249 +116,18 @@ impl<const MAX_BLOCKSIZE: usize> ExampleGainDSP<MAX_BLOCKSIZE> {
         self.gain.reset();
     }
 
-    // -- Process methods -----------------------------------------
-    //
-    // Remember that the goal of this plugin project is **NOT** to create a reusable
-    // shared DSP library (I believe that would be more hassle than it is worth). The
-    // goal of this plugin project is to simply provide standalone "plugins", each with
-    // their own optimized DSP implementation. We are however free to reference and
-    // copy-paste portions of DSP across plugins as we see fit (as long as the other
-    // plugins are also GPLv3).
-    //
-    // Here you can add whatever process/process_replacing methods you need. Note that
-    // you should prefer to use `process_replacing` if the effect can benefit from it.
-    // If you do use a `process_replacing` method, there is no need to create a seperate
-    // `non-process-replacing` method (the caller will be responsible for copying buffers
-    // if they need that functionality).
-    //
-    // Even though gain is such a simple effect, this example provides several different
-    // methods to more effectly take advantage of SIMD optimizations. This will be more
-    // necessary for algorithms that can only process one frame at a time such as filters.
-    ///
-    /// If a given buffer slice has a length greather than `MAX_BLOCKSIZE`, then the
-    /// behavior should be to only process the number of frames up to MAX_BLOCKSIZE.
-    //
-    // You must also take care to zero-out any unused (non-process-replacing) output
-    // buffers.
+    /// The process method.
+    /// 
+    /// We mark this as "unsafe" because we are stipulating that the caller **MUST** pass in buffers that
+    /// are all at-least the length of `frames`, and that it's considered undefined behavior if they don't.
+    /// Note the caller is allowed to send slices that are longer than `frames`.
+    pub unsafe fn process_stereo(&mut self, frames: usize, in_l: &[f32], in_r: &[f32], out_l: &mut [f32], out_r: &mut [f32]) {
+        // Process in blocks. This is probably not necessary for something as simple as a gain plugin, but
+        // I'm doing it this way as an example.
 
-    /// Process a single channel.
-    ///
-    /// This is the "fallback"/"auto-vectorized" version.
-    ///
-    /// Also, if the length of `buf_1` or `buf_2` is greather than `MAX_BLOCKSIZE`, then the
-    /// behavior should be to only process the number of frames up to MAX_BLOCKSIZE.
-    ///
-    /// Please note this will **NOT** work correctly if you try and call this mutliple
-    /// times for mutliple mono signals. The internal parameter-smoothing algorithm only works
-    /// correctly when this is called once per process cycle.
-    pub fn process_replacing_mono_fb(&mut self, buf: &mut [f32]) {
-        // This tells the compiler that it is safe to elid all bounds checking on
-        // array indexing..
-        let frames = buf.len().min(MAX_BLOCKSIZE);
+        self.gain.smoothed(frames)
 
-        // Get the auto-smoothed parameter buffers.
-        let gain = self.gain.smoothed(frames.into());
-
-        if !gain.is_smoothing() {
-            // If the gain parameter is not currently being smoothed (because it has not moved in
-            // short while), we can optimize even more here by using a constant gain factor (which
-            // will have better SIMD efficiency). Note this kind of optimization may not be
-            // necessary, but I'm adding it here as an example.
-            let gain = gain[0];
-
-            for i in 0..frames {
-                buf[i] *= gain;
-            }
-        } else {
-            for i in 0..frames {
-                buf[i] *= gain[i];
-            }
-        }
-    }
-
-    /// Process a stereo channel.
-    ///
-    /// This is the "fallback"/"auto-vectorized" version.
-    ///
-    /// Also, if the length of `buf_1` or `buf_2` is greather than `MAX_BLOCKSIZE`, then the
-    /// behavior should be to only process the number of frames up to MAX_BLOCKSIZE.
-    ///
-    /// Please note this will **NOT** work correctly if you try and call this mutliple
-    /// times for multiple stereo signals. The internal parameter-smoothing algorithm only works
-    /// correctly when this is called once per process cycle.
-    pub fn process_replacing_stereo_fb(&mut self, buf_1: &mut [f32], buf_2: &mut [f32]) {
-        // This tells the compiler that it is safe to elid all bounds checking on
-        // array indexing..
-        let frames = buf_1.len().min(buf_2.len()).min(MAX_BLOCKSIZE);
-
-        // Get the auto-smoothed parameter buffers.
-        let gain = self.gain.smoothed(frames.into());
-
-        if !gain.is_smoothing() {
-            // If the gain parameter is not currently being smoothed (because it has not moved in
-            // short while), we can optimize even more here by using a constant gain factor (which
-            // will have better SIMD efficiency). Note this kind of optimization may not be
-            // necessary, but I'm adding it here as an example.
-            let gain = gain[0];
-
-            for i in 0..frames {
-                buf_1[i] *= gain;
-                buf_2[i] *= gain;
-            }
-        } else {
-            for i in 0..frames {
-                buf_1[i] *= gain[i];
-                buf_2[i] *= gain[i];
-            }
-        }
-    }
-
-    /// Process a single stereo signal.
-    ///
-    /// This is the explicit horizontally-optimized SIMD version. (Note that only some algorithms
-    /// like gain will work with horizontally-optimized SIMD. Any algorithm that inclues a filter
-    /// will not work with this type of optimization).
-    ///
-    /// Note you should make sure your "fallback"/"auto-vectorized" version works before
-    /// attempting to make this optimization.
-    ///
-    /// Also, if the length of `buf_1` or `buf_2` is greather than `MAX_BLOCKSIZE`, then the
-    /// behavior should be to only process the number of frames up to MAX_BLOCKSIZE.
-    ///
-    /// Please note this will **NOT** work correctly if you try and call this mutliple
-    /// times for multiple stereo signals. The internal parameter-smoothing algorithm only works
-    /// correctly when this is called once per process cycle.
-    #[cfg(feature = "portable-simd")]
-    pub fn process_replacing_stereo_h<const LANES: usize>(
-        &mut self,
-        buf_1: &mut [f32],
-        buf_2: &mut [f32],
-    ) where
-        LaneCount<LANES>: SupportedLaneCount,
-    {
-        // This tells the compiler that it is safe to elid all bounds checking on
-        // array indexing.
-        let frames = buf_1.len().min(buf_2.len()).min(MAX_BLOCKSIZE);
-
-        // Get the auto-smoothed parameter buffers.
-        let gain = self.gain.smoothed(frames.into());
-
-        if !gain.is_smoothing() {
-            // If the gain parameter is not currently being smoothed (because it has not moved in
-            // short while), we can optimize even more here by using a constant gain factor (which
-            // will have better SIMD efficiency). Note this kind of optimization may not be
-            // necessary, but I'm adding it here as an example.
-            let gain_v = Simd::<f32, LANES>::splat(gain[0]);
-
-            let mut i = 0;
-            while i + LANES <= frames {
-                let buf_1_v = Simd::<f32, LANES>::from_slice(&buf_1[i..i + LANES]);
-                let buf_2_v = Simd::<f32, LANES>::from_slice(&buf_2[i..i + LANES]);
-
-                let out_1_v = buf_1_v * gain_v;
-                let out_2_v = buf_2_v * gain_v;
-
-                buf_1[i..i + LANES].copy_from_slice(out_1_v.as_array());
-                buf_2[i..i + LANES].copy_from_slice(out_2_v.as_array());
-
-                i += LANES;
-            }
-
-            // Process remaining elements.
-            let gain = gain[0];
-            for i2 in i..frames {
-                buf_1[i2] *= gain;
-                buf_2[i2] *= gain;
-            }
-        } else {
-            let mut i = 0;
-            while i + LANES <= frames {
-                let buf_1_v = Simd::<f32, LANES>::from_slice(&buf_1[i..i + LANES]);
-                let buf_2_v = Simd::<f32, LANES>::from_slice(&buf_2[i..i + LANES]);
-                let gain_v = Simd::<f32, LANES>::from_slice(&gain[i..i + LANES]);
-
-                let out_1_v = buf_1_v * gain_v;
-                let out_2_v = buf_2_v * gain_v;
-
-                buf_1[i..i + LANES].copy_from_slice(out_1_v.as_array());
-                buf_2[i..i + LANES].copy_from_slice(out_2_v.as_array());
-
-                i += LANES;
-            }
-
-            // Process remaining elements.
-            for i2 in i..frames {
-                buf_1[i2] *= gain[i2];
-                buf_2[i2] *= gain[i2];
-            }
-        }
-    }
-
-    /// Process two channels at a time.
-    ///
-    /// This is the explicit vertically-optimized SIMD version. (This is not really necessary or
-    /// even optimial for gain, but most algorithms that include filters will generally be
-    /// optimized this way, so I provide this as an example of how to do that.
-    ///
-    /// Note you should make sure your "fallback"/"auto-vectorized" version works before
-    /// attempting to make this optimization.
-    ///
-    /// Also, if the length of `buf_1` or `buf_2` is greather than `MAX_BLOCKSIZE`, then the
-    /// behavior should be to only process the number of frames up to MAX_BLOCKSIZE.
-    ///
-    /// Please note this will **NOT** work correctly if you try and call this mutliple
-    /// times for multiple stereo signals. The internal parameter-smoothing algorithm only works
-    /// correctly when this is called once per process cycle.
-    #[cfg(feature = "portable-simd")]
-    pub fn process_replacing_stereo_v(&mut self, buf_1: &mut [f32], buf_2: &mut [f32]) {
-        // This tells the compiler that it is safe to elid all bounds checking on
-        // array indexing.
-        let frames = buf_1.len().min(buf_2.len()).min(MAX_BLOCKSIZE);
-
-        // Get the auto-smoothed parameter buffers.
-        let gain = self.gain.smoothed(frames.into());
-
-        if !gain.is_smoothing() {
-            // If the gain parameter is not currently being smoothed (because it has not moved in
-            // short while), we can optimize even more here by using a constant gain factor (which
-            // will have better SIMD efficiency). Note this kind of optimization may not be
-            // necessary, but I'm adding it here as an example.
-            let gain_v = f32x2::splat(gain[0]);
-
-            for i in 0..frames {
-                let buf_v = f32x2::from_array([buf_1[i], buf_2[i]]);
-
-                let out_v = buf_v * gain_v;
-
-                let out = out_v.as_array();
-                buf_1[i] = out[0];
-                buf_2[i] = out[1];
-            }
-        } else {
-            for i in 0..frames {
-                let buf_v = f32x2::from_array([buf_1[i], buf_2[i]]);
-                let gain_v = f32x2::splat(gain[i]);
-
-                let out_v = buf_v * gain_v;
-
-                let out = out_v.as_array();
-                buf_1[i] = out[0];
-                buf_2[i] = out[1];
-            }
-        }
     }
 }
 
-/// This struct will live in the host/UI thread. It is meant as a way for the
-/// host/UI to manipulate the DSP portion.
-///
-/// Here you may use whatever lock-free method for state synchronization you need,
-/// such as lock-free ring buffers or atomics. (Note that the `ParamF32UiHandle`
-/// struct internally uses an atomic.)
-///
-/// If you need to send data allocated on the heap to the rt thread, prefer to
-/// use the smart pointers in the `basedrop` crate which automatically
-/// sends data dropped on the rt thread to a "garbage collection" thread.
-pub struct ExampleGainUiHandle {
-    pub gain: ParamF32UiHandle,
-}
+
