@@ -11,11 +11,6 @@ Please take a look at the [`DSP Design Document`] for more details if you are in
 
 Make sure you have the `nightly` version of rust installed.
 
-Note, if you are developing plugins in this repo, you can set this directory to use the nightly compiler by default by running this command in the root directory of this repo:
-```
-rustup override add nightly
-```
-
 To build the debug/testing version of a plugin, run this command (replacing `example-gain-baseplug-nogui` with whatever plugin you wish to build):
 ```
 cargo +nightly build --package example-gain-baseplug-nogui
@@ -29,6 +24,11 @@ cargo +nightly build --package example-gain-baseplug-nogui
 Some plugins have a feature flag you can use to enable SIMD optimizations (recommended if you are not developing or testing the plugin).
 ```
 cargo +nightly build --package example-gain-baseplug-nogui --release --features example-gain-baseplug-nogui/optimized_simd
+```
+
+*Note, if you are developing plugins in this repo, you can set this directory to use the nightly compiler by default by running this command in the root directory of this repo:*
+```
+rustup override add nightly
 ```
 
 ### Installing
