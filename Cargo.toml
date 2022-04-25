@@ -5,11 +5,15 @@ authors = ["Billy Messenger <BillyDM@tutamail.com>"]
 edition = "2018"
 publish = false
 
+[profile.release]
+lto = true
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [workspace]
 members = [
     "example-gain/example-gain-dsp",
+    "example-gain/example-gain-baseplug-nogui",
     "parametric-eq",
 ]
 

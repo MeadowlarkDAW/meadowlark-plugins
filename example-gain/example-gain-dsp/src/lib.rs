@@ -13,7 +13,7 @@
 
 // We will use some standard types defined in this crate in this plugin project.
 use rusty_daw_core::{
-    ParamF32, ParamF32UiHandle, SampleRate, Unit, DEFAULT_DB_GRADIENT, DEFAULT_SMOOTH_SECS,
+    ParamF32, ParamF32Handle, SampleRate, Unit, DEFAULT_DB_GRADIENT, DEFAULT_SMOOTH_SECS,
 };
 
 /// Prefer to use block-based processing. For this plugin we will process in block sizes
@@ -28,16 +28,16 @@ pub const MAX_DB: f32 = 12.0;
 /// This struct will live in the realtime thread.
 ///
 /// Here you may use whatever lock-free method for state synchronization from the
-/// "UiHandle" counterpart of the plugin as you see fit, such as lock-free ring buffers
+/// "Handle" counterpart of the plugin as you see fit, such as lock-free ring buffers
 /// or atomics. (In this case we are using the `ParamF32` struct which internally uses an
 /// atomic for state syncronization.)
 ///
 /// If you need to send data allocated on the heap to the rt thread, prefer to
 /// use the smart pointers in the `basedrop` crate which automatically
 /// sends data dropped on the rt thread to a "garbage collection" thread.
-pub struct ExampleGainDSP {
+pub struct ExampleGainEffect {
     /// The `ParamF32` type in `rusty_daw_core` provides convenient auto-smoothing of
-    /// parameters as well as auto-syncing with its `ParamF32UiHandle` counterpart
+    /// parameters as well as auto-syncing with its `ParamF32Handle` counterpart
     /// in the UI thread.
     pub gain: ParamF32<MAX_BLOCKSIZE>,
 }
@@ -46,8 +46,9 @@ pub struct ExampleGainDSP {
 ///
 /// It is meant as a way for the host/UI to manipulate and synchronize state to/from the
 /// audio-thread counterpart.
-pub struct ExampleGainUiHandle {
-    pub gain: ParamF32UiHandle,
+#[derive(Clone)]
+pub struct ExampleGainHandle {
+    pub gain: ParamF32Handle,
 }
 
 /// This struct defines a preset for the plugin.
@@ -58,13 +59,19 @@ pub struct ExampleGainPreset {
     pub gain_db: f32,
 }
 
-impl ExampleGainDSP {
+impl Default for ExampleGainPreset {
+    fn default() -> Self {
+        ExampleGainPreset { gain_db: 0.0 }
+    }
+}
+
+impl ExampleGainEffect {
     /// The constructor of the DSP struct should always return itself along with the
-    /// "UIHandle" counterpart that is sent to the UI thread for syncronization.
+    /// "Handle" counterpart that is sent to the UI thread for syncronization.
     pub fn new(
         preset: &ExampleGainPreset,
         sample_rate: SampleRate,
-    ) -> (ExampleGainDSP, ExampleGainUiHandle) {
+    ) -> (ExampleGainEffect, ExampleGainHandle) {
         // Construct a parameter.
         //
         // If your preset uses normalized values, use `ParamF32::from_normalized()` instead.
@@ -100,8 +107,8 @@ impl ExampleGainDSP {
         );
 
         (
-            ExampleGainDSP { gain },
-            ExampleGainUiHandle { gain: gain_handle },
+            ExampleGainEffect { gain },
+            ExampleGainHandle { gain: gain_handle },
         )
     }
 
@@ -113,35 +120,58 @@ impl ExampleGainDSP {
         self.gain.reset();
     }
 
-    /// An example of a safe unoptimized version of the DSP.
+    /// An example of a safe, unoptimized version of the DSP.
     ///
     /// Note you should avoid using unsafe and SIMD until the DSP is fully working and it's time
     /// to optimize.
     ///
-    /// The caller **MUST** pass in buffers that are all the same length.
-    pub fn process(&mut self, in_l: &[f32], in_r: &[f32], out_l: &mut [f32], out_r: &mut [f32]) {
-        let frames = in_l.len();
-
-        // Process in blocks. This is necessary because `ParamF32` has a maximum block size it
-        // can operate on.
+    /// The caller **MUST** pass in buffers that all have a length of at-least `frames`.
+    pub fn process(
+        &mut self,
+        total_frames: usize,
+        in_l: &[f32],
+        in_r: &[f32],
+        out_l: &mut [f32],
+        out_r: &mut [f32],
+    ) {
+        // Boilerplate to process in blocks. This is necessary because `ParamF32` has a
+        // maximum block size it can operate on.
         let mut frames_processed = 0;
-        while frames_processed < frames {
-            let frames = (frames - frames_processed).min(MAX_BLOCKSIZE);
+        while frames_processed < total_frames {
+            let frames = (total_frames - frames_processed).min(MAX_BLOCKSIZE);
 
-            // Retrieve the auto-smoothed output of the parameter.
-            let gain = self.gain.smoothed(frames);
-
+            // Doing it this way lets the compiler easily elid all bounds checking in
+            // the loop inside the `process_block()` method.
             let in_l_part = &in_l[frames_processed..frames_processed + frames];
             let in_r_part = &in_r[frames_processed..frames_processed + frames];
             let out_l_part = &mut out_l[frames_processed..frames_processed + frames];
             let out_r_part = &mut out_r[frames_processed..frames_processed + frames];
 
-            for i in 0..frames {
-                out_l_part[i] = in_l_part[i] * gain.values[i];
-                out_r_part[i] = in_r_part[i] * gain.values[i];
-            }
+            self.process_block(frames, in_l_part, in_r_part, out_l_part, out_r_part);
 
             frames_processed += frames;
+        }
+    }
+    /// We can separate the actual DSP part into its own function if we wish.
+    ///
+    /// This "inline" probably isn't necessary since this method is only called by the
+    /// method above inside a loop, but I just want to make sure that the compiler
+    /// properly elids the bounds checks.
+    #[inline]
+    fn process_block(
+        &mut self,
+        frames: usize,
+        in_l: &[f32],
+        in_r: &[f32],
+        out_l: &mut [f32],
+        out_r: &mut [f32],
+    ) {
+        // Retrieve the auto-smoothed output of the parameter.
+        let gain = self.gain.smoothed(frames);
+
+        for i in 0..frames {
+            out_l[i] = in_l[i] * gain.values[i];
+            out_r[i] = in_r[i] * gain.values[i];
         }
     }
 
@@ -151,13 +181,11 @@ impl ExampleGainDSP {
     /// Note you should avoid using unsafe and SIMD until the DSP is fully working and it's time
     /// to optimize.
     ///
-    /// The caller **MUST** pass in buffers that are all the same length.
-    #[cfg(all(
-        any(target_arch = "x86", target_arch = "x86_64"),
-        target_feature = "avx"
-    ))]
-    pub unsafe fn process_avx(
+    /// The caller **MUST** pass in buffers that all have a length of at-least `frames`.
+    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+    pub unsafe fn process_avx2(
         &mut self,
+        total_frames: usize,
         in_l: &[f32],
         in_r: &[f32],
         out_l: &mut [f32],
@@ -168,7 +196,6 @@ impl ExampleGainDSP {
         #[cfg(target_arch = "x86_64")]
         use std::arch::x86_64::*;
 
-        let total_frames = in_l.len();
         let n_simd_frames = total_frames - (total_frames % 8);
 
         // Process in blocks. This is necessary because `ParamF32` has a maximum block size it
