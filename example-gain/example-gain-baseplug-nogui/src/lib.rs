@@ -25,14 +25,14 @@ baseplug::model! {
         // the gradients in `ExampleGainEffect`.
         #[unsmoothed]  // Make sure *ALL* parameters are "unsmoothed" because we are
         // doing our own parameter smoothing.
-        gain: f32,
+        gain_db: f32,
     }
 }
 
 // Insert the default preset here.
 impl Default for ExampleGainModel {
     fn default() -> Self {
-        Self { gain: 0.0 }
+        Self { gain_db: 0.0 }
     }
 }
 
@@ -58,8 +58,12 @@ impl Plugin for ExampleGainPlug {
 
     #[inline]
     fn new(sample_rate: f32, model: &ExampleGainModel) -> Self {
-        let (effect, handle) =
-            ExampleGainEffect::new(&ExampleGainPreset::default(), sample_rate.into());
+        // Convert from baseplug's preset to our preset.
+        let preset = ExampleGainPreset {
+            gain_db: model.gain_db,
+        };
+
+        let (effect, handle) = ExampleGainEffect::new(&preset, sample_rate.into());
 
         Self { effect, handle }
     }
@@ -75,7 +79,7 @@ impl Plugin for ExampleGainPlug {
         }
 
         // Update all the values from baseplug's model into our own smoothing model.
-        self.effect.gain.set_value(*model.gain);
+        self.effect.gain.set_value(*model.gain_db);
 
         // We just want the raw slices of the buffers.
         let in_l = input[0];
