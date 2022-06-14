@@ -1,5 +1,5 @@
 [package]
-name = "rusty-daw-plugins"
+name = "meadowlark-plugins"
 version = "0.1.0"
 authors = ["Billy Messenger <BillyDM@tutamail.com>"]
 edition = "2018"
@@ -12,9 +12,6 @@ lto = true
 
 [workspace]
 members = [
-    "example-gain/example-gain-dsp",
-    "example-gain/example-gain-baseplug-nogui",
-    "parametric-eq",
 ]
 
 [dependencies]
