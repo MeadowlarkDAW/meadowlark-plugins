@@ -1,0 +1,13 @@
+[package]
+name = "noise-generator-dropseed"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+noise-generator-dsp = { path = "../noise-generator-dsp" }
+#dropseed = { path = "../../../dropseed" }
+dropseed = { git = "https://github.com/MeadowlarkDAW/dropseed", branch = "main" }
+meadowlark-core-types = "0.1"
+basedrop = "0.1"

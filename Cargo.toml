@@ -12,6 +12,8 @@ lto = true
 
 [workspace]
 members = [
+    "noise-generator/noise-generator-dsp",
+    "noise-generator/noise-generator-dropseed",
 ]
 
 [dependencies]
