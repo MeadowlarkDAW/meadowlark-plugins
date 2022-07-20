@@ -12,6 +12,10 @@ Because we have a small team at the moment, we will focus more on porting DSP fr
 
 One more note on DSP. We should always consider replacing any biquad filters with the [`SVF`] filter as it behaves much better when being automated and tends to be more stable with high Q factors.
 
+# IMPORTANT note on licensing
+
+Before porting any existing open source plugin DSP, make sure that the license of the plugin is compatible with the `GPLv3` license. For example, if the license says `GPLv2 or later`, then we're good, but if the license says `GPLv2` only, then we will need to contact the original author to make sure it's okay to relicense the port to `GPLv3`.
+
 # Special note on using Rust
 
 While we definitely prefer writing in Rust, if you wish to contribute DSP and you aren't comfortable with Rust, you are free to develop the DSP in whatever programming language you are comfortable with (On the one condition that the DSP be completely self-contained and not depend on any external DSP libraries). We can then port your code to Rust once you are done.
