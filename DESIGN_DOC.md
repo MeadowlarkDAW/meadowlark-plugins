@@ -653,6 +653,16 @@ This synth will include:
 Since this plugin is simple enough, we can probably focus on fitting it in an inline UI.
 
 
+## ☐ Drum Synth
+priority: `**`
+
+*(TODO: Decide how this should work)*
+
+### Existing DSP references
+* [`GeonKick`](https://github.com/free-sm/geonkick)
+* [`Kickmess`](https://github.com/WeirdConstructor/Kickmess)
+
+
 
 ## ☐ Flagship subtractive synth
 priority: `*`
