@@ -4,5 +4,5 @@
 # [package_name]
 # name = "Human Readable Plugin Name"  # defaults to <package_name>
 
-[gain-pan-stereo]
-name = "Birdy Gain"
+[mix-utility]
+name = "Mix Utility"

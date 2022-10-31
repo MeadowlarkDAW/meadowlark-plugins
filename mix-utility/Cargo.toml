@@ -1,5 +1,5 @@
 [package]
-name = "gain-pan-stereo"
+name = "mix-utility"
 version = "0.1.0"
 edition = "2021"
 authors = ["Eric Daniel Tauscher <vibeniumproductions@gmail.com>"]
