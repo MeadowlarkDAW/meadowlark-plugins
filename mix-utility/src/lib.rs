@@ -133,8 +133,14 @@ impl Plugin for MixUtility {
         _context: &mut impl ProcessContext<Self>,
     ) -> ProcessStatus {
         
+        let mut left_polarity_param_value: f32;
+        let mut right_polarity_param_value: f32;
         let mut mid: f32;
         let mut side: f32;
+        let mut stereo_param_value: f32;
+        let mut pan_param_value: f32;
+        let mut theta: f32;
+        let mut gain_param_value: f32;
 
         for mut channel_samples in buffer.iter_samples() {
             
@@ -144,16 +150,15 @@ impl Plugin for MixUtility {
             let right_ptr: &mut f32 = chan_iter_mut.next().unwrap();
 
             // Polarity
-            let left_polarity_param_value: f32 
+            left_polarity_param_value 
                 = self.params.left_polarity.normalized_value();
-            let right_polarity_param_value: f32 
+            right_polarity_param_value
                 = self.params.right_polarity.normalized_value();
             *left_ptr *= -2.0 * left_polarity_param_value + 1.0;
             *right_ptr *= -2.0 * right_polarity_param_value + 1.0;
 
             // Stereo widener
-            let stereo_param_value: f32 
-                = self.params.stereo.smoothed.next();
+            stereo_param_value = self.params.stereo.smoothed.next();
             // Mid = ((Left + Right) / 2) and Side = ((Left - Right) / 2)
             // Since default value is 0.5 and is between 0 and 1,
             mid = (*left_ptr + *right_ptr) * (1.0 - stereo_param_value);
@@ -162,14 +167,14 @@ impl Plugin for MixUtility {
             *right_ptr = mid - side;
 
             // Panning (Constant Power)
-            let pan_param_value: f32 = self.params.pan.smoothed.next();
+            pan_param_value = self.params.pan.smoothed.next();
             // Interpolate the given pan_param_value
-            let theta: f32 = std::f32::consts::PI / 4.0 * (pan_param_value + 1.0);
+            theta = std::f32::consts::PI / 4.0 * (pan_param_value + 1.0);
             *left_ptr *= theta.cos();
             *right_ptr *= theta.sin();
 
             // Gain
-            let gain_param_value: f32 = self.params.gain.smoothed.next();
+            gain_param_value = self.params.gain.smoothed.next();
             *left_ptr *= gain_param_value;
             *right_ptr *= gain_param_value;
             
