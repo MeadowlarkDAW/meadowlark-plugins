@@ -18,9 +18,15 @@ Before porting any existing open source plugin DSP, make sure that the license o
 
 # Special note on using Rust
 
-While we definitely prefer writing in Rust, if you wish to contribute DSP and you aren't comfortable with Rust, you are free to develop the DSP in whatever programming language you are comfortable with (On the one condition that the DSP be completely self-contained and not depend on any external DSP libraries). We can then port your code to Rust once you are done.
+While we definitely prefer writing in Rust, if you wish to contribute DSP and you aren't comfortable with Rust, you are free to develop the DSP in whatever programming language you are comfortable with (On the one condition that the DSP be completely self-contained and does not depend on any external DSP libraries, including JUCE's built-in DSP classes). We can then port your code to Rust once you are done.
 
 # Non-Goals
+
+### GUI
+
+If you wish to contribute, please don't worry about the UI until the DSP is completed. DSP should always be the main focus when developing a plugin, and the UI will come after. Plugin frameworks like [`nih-plug`], [`DPF`], [`DPlug`], and JUCE make it easy to create gui-less plugins that can be loaded into any DAW or host for testing.
+
+Again, if you are not comfortable with Rust, you may create a GUI-less plugin in whatever language and framework you choose, and then we can port that code to Rust and `nih-plug` later (On the one condition that the DSP be completely self-contained and does not depend on any external DSP libraries, including JUCE's built-in DSP classes).
 
 ### Synths and Modularity
 
@@ -66,6 +72,10 @@ For MVP, we will only focus only on creating a few very basic plugins as a proof
 # Plugin Framework
 
 Plugins will be created using the [`nih-plug`] framework.
+
+Again, please don't worry about the UI until the DSP is completed. DSP should always be the main focus when developing a plugin, and the UI comes after.
+
+Also again, if you're not comfortable with Rust, you may create a GUI-less plugin in whatever language and framework you choose, and then we can port that code to Rust and `nih-plug` later (On the one condition that the DSP be completely self-contained and does not depend on any external DSP libraries, including JUCE's built-in DSP classes).
 
 In order to have feature-rich inline UIs in Meadowlark's horizontal FX rack, we will use our own custom CLAP extension that lives in the [`meadowlark-clap-exts`] repo *(This extension has yet to be written).* This allows us to only need one plugin framework for both the "used inside Meadowlark" target and the "used outside of Meadowlark" target.
 
@@ -790,6 +800,8 @@ This is used to automatically play chords in a given scale from a single note.
 
 
 [`nih-plug`]: https://github.com/robbert-vdh/nih-plug
+[`DPF`]: https://github.com/DISTRHO/DPF
+[`DPlug`]: https://github.com/AuburnSounds/Dplug
 [`meadowlark-clap-exts`]: https://github.com/MeadowlarkDAW/meadowlark-clap-exts
 [`dropseed`]: https://github.com/MeadowlarkDAW/dropseed
 [`Vital`]: https://github.com/mtytel/vital
