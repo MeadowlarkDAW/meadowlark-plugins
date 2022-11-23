@@ -87,9 +87,16 @@ Each plugin is marked with a priority, with 5 asteriks (`*****`) being the highe
 
 Also note that while I do reference [`Vital`] a lot here as a source of DSP, from now on I will reference the fully-GPL-licensed fork called [`Vitalium`]. This will ensure thate whatever we are porting from this plugin is licensed under GPL.
 
+Each plugin in this list is marked with its current develompent status:
+* `Not Started Yet` - The development of this plugin has not started yet and is free for anyone to take up the task.
+* `DSP WIP` - The DSP is currently being developed. (Or I already have a plan on the exact DSP code I want to use).
+* `DSP Completed` - The DSP of this plugin has been finished, but it still needs a UI.
+* `UI WIP` - The DSP of this plugin has been finished, and the UI currently is in development.
+* `Completed` - The development of this plugin is finished.
+
 # Audio FX Suite
 
-## ☐ Gain/pan/stereo width utility plugin
+## `DSP WIP` Gain/pan/stereo width utility plugin
 priority: `*****`
 
 This will be a very basic plugin with just three parameters:
@@ -101,7 +108,7 @@ DSP for this should be fairly straight-forward.
 
 
 
-## ☐ 2-band Splitter plugin
+## `DSP WIP` 2-band Splitter plugin
 priority: `*****`
 
 This will be 2-band splitter plugin.
@@ -110,7 +117,7 @@ This should have a gain parameter for each band, and a parameter to control the 
 
 
 
-## ☐ 3-band Splitter plugin
+## `DSP WIP` 3-band Splitter plugin
 priority: `*****`
 
 This will be 3-band splitter plugin.
@@ -119,7 +126,7 @@ This should have a gain parameter for each band, and parameters to control the c
 
 
 
-## ☐ Mid/Side Splitter & Merger plugin
+## `DSP WIP` Mid/Side Splitter & Merger plugin
 priority: `*****`
 
 This will be 2 plugins (mid/side split and mid/side merge)
@@ -128,7 +135,7 @@ This should have a gain parameter for mid and side.
 
 
 
-## ☐ L/R Splitter & Merger plugin
+## `DSP WIP` L/R Splitter & Merger plugin
 priority: `*****`
 
 This will be 2 plugins (L/R split and L/R merge)
@@ -139,7 +146,7 @@ In addition there should be a gain parameter for the L and R channels.
 
 
 
-## ☐ Time Shift plugin
+## `Not Started Yet` Time Shift plugin
 priority: `*****`
 
 A plugin that simply delays the signal by a given amount (either by samples or by ms).
@@ -150,7 +157,7 @@ In fact, because CLAP supports dynamic latency, we can even delay a signal by a 
 
 
 
-## ☐ Parametric EQ
+## `DSP WIP` Parametric EQ
 priority: `*****`
 
 The parametric EQ is the most important and essential plugin in any kind of music production workflow, so it's important that we get this one right.
@@ -196,7 +203,7 @@ This plugin will have no "dynamic EQ" mode, since this would introduce a lot of 
 
 
 
-## ☐ Single-band Compressor
+## `Not Started Yet` Single-band Compressor
 priority: `*****`
 
 ### DSP
@@ -226,7 +233,7 @@ I have no particular preferences on the design or workflow of this plugin. We ca
 
 
 
-## ☐ Dynamics Processor
+## `Not Started Yet` Dynamics Processor
 priority: `****`
 
 This is essentially a compressor but with the added ability to expand in addition to compress. This plugin will be able to switch between single-band mode and multi-band mode (3 bands).
@@ -248,7 +255,7 @@ In addition the UI should have a toggle to switch between single-band mode and m
 
 
 
-## ☐ Limiter
+## `Not Started Yet` Limiter
 priority: `****`
 
 ### DSP
@@ -271,7 +278,7 @@ I have no particular preferences on the design or workflow of this plugin. We ca
 
 
 
-## ☐ Gate Plugin
+## `Not Started Yet` Gate Plugin
 priority: `****`
 
 ### DSP
@@ -296,7 +303,7 @@ I have no particular preferences on the design or workflow of this plugin. We ca
 
 
 
-## ☐ Bus Compressor
+## `Not Started Yet` Bus Compressor
 priority: `****`
 
 *TODO: Decide how this plugin should work or if we should even include this as a separate plugin from the single-band compressor plugin.*
@@ -307,7 +314,7 @@ A big problem though is that there are no existing open source plugins we can po
 
 
 
-## ☐ Distortion/Saturation plugin
+## `Not Started Yet` Distortion/Saturation plugin
 priority: `****`
 
 There are a huge variety of distortion algorithms out there. So an important aspect of this plugin should be that it has a drop-down to select between different algorithms. This will allow us to easily add new and improved algorithms in the future without having to create an entirely new plugin for each addition *(looking at you FL)*.
@@ -342,7 +349,7 @@ This plugin won't contain any guitar-amp or guitar-cabinet simulations. I think 
 
 
 
-## ☐ Delay plugin
+## `Not Started Yet` Delay plugin
 priority: `****`
 
 The delay module in [`Vitalium`] is already exactly what I'm looking for here. I think we should just port it and its workflow.
@@ -351,7 +358,7 @@ The delay module in [`Vitalium`] is already exactly what I'm looking for here. I
 
 
 
-## ☐ Reverb plugin
+## `Not Started Yet` Reverb plugin
 priority: `****`
 
 There are a huge variety of reverb algorithms out there. So an important aspect of this plugin should be that it has a drop-down to select between different algorithms. This will allow us to easily add new and improved algorithms in the future without having to create an entirely new plugin for each addition *(looking at you FL)*.
@@ -375,7 +382,7 @@ The parameters will probably vary depending on the plugin, but here is what para
 
 
 
-## ☐ Tremolo/Auto-Pan plugin
+## `Not Started Yet` Tremolo/Auto-Pan plugin
 priority: `***`
 
 This one should be pretty straightforward (control either gain or pan with an LFO).
@@ -393,7 +400,7 @@ It should also stay aware of the current transport position so that the LFO's ph
 
 
 
-## ☐ DJM-Filter-like performance filter plugin
+## `Not Started Yet` DJM-Filter-like performance filter plugin
 priority: `***`
 
 ### DSP
@@ -417,7 +424,7 @@ The lowpass and highpass filters will both be 2nd-order filters.
 
 
 
-## ☐ Chorus plugin
+## `Not Started Yet` Chorus plugin
 priority: `***`
 
 The chorus module in [`Vitalium`] is already exactly what I'm looking for here. I think we should just port it and its workflow.
@@ -426,7 +433,7 @@ The chorus module in [`Vitalium`] is already exactly what I'm looking for here. 
 
 
 
-## ☐ Flanger plugin
+## `Not Started Yet` Flanger plugin
 priority: `***`
 
 The flanger module in [`Vitalium`] is already exactly what I'm looking for here. I think we should just port it and its workflow.
@@ -435,7 +442,7 @@ The flanger module in [`Vitalium`] is already exactly what I'm looking for here.
 
 
 
-## ☐ Phaser plugin
+## `Not Started Yet` Phaser plugin
 priority: `***`
 
 The phaser module in [`Vitalium`] is already exactly what I'm looking for here. I think we should just port it and its workflow.
@@ -444,7 +451,7 @@ The phaser module in [`Vitalium`] is already exactly what I'm looking for here. 
 
 
 
-## ☐ Filter plugin
+## `Not Started Yet` Filter plugin
 priority: `***`
 
 The filter module in [`Vitalium`] is already exactly what I'm looking for here. I think we should just port it and its workflow.
@@ -453,7 +460,7 @@ The filter module in [`Vitalium`] is already exactly what I'm looking for here. 
 
 
 
-## ☐ Convolver
+## `Not Started Yet` Convolver
 priority: `***`
 
 A plugin that simply convolutes a signal from a given impulse response. Useful for high quality reverbs and guitar cabinet simulations.
@@ -464,7 +471,7 @@ A plugin that simply convolutes a signal from a given impulse response. Useful f
 
 
 
-## ☐ Dynamic EQ
+## `Not Started Yet` Dynamic EQ
 priority: `**`
 
 ### DSP
@@ -486,7 +493,7 @@ Unlike the regular parametric EQ plugin, this plugin will probably only show con
 
 
 
-## ☐ Analog EQ
+## `Not Started Yet` Analog EQ
 priority: `**`
 
 This will be a plugin with a drop-down to select from several different analogue-modelled EQ algorithms. This will also allow us to easily add new and improved algorithms in the future without having to create an entirely new plugin for each addition.
@@ -500,14 +507,14 @@ This plugin should be basic in its UI and only include knobs (just like a real a
 
 
 
-## ☐ Vibrato plugin
+## `Not Started Yet` Vibrato plugin
 priority: `**`
 
 *TODO: Decide how this plugin should work or if we should even include this as a plugin.*
 
 
 
-## ☐ Vocal Compressor
+## `Not Started Yet` Vocal Compressor
 priority: `**`
 
 *TODO: Decide how this plugin should work or if we should even include this as a separate plugin from the single-band compressor plugin.*
@@ -518,7 +525,7 @@ A big problem though is that there are no existing open source plugins we can po
 
 
 
-## ☐ Guitar Amp/Cabinet plugin
+## `Not Started Yet` Guitar Amp/Cabinet plugin
 priority: `**`
 
 *TODO: Decide how this plugin should work or if we should even include this as a plugin.*
@@ -528,21 +535,21 @@ priority: `**`
 
 
 
-## ☐ Mastering Compressor/Limiter
+## `Not Started Yet` Mastering Compressor/Limiter
 priority: `*`
 
 *TODO: Decide how this plugin should work or if we should even include this as a separate plugin.*
 
 
 
-## ☐ Linear phase EQ
+## `Not Started Yet` Linear phase EQ
 priority: `*`
 
 *TODO: Decide how this plugin should work or if we should even include this as a plugin. I don't exactly want to include this in the main "parametric eq" plugin since the massive amount of introduced latency would be quite jarring when switching between regular mode and linear-phase mode.*
 
 
 
-## ☐ Vocoder
+## `Not Started Yet` Vocoder
 priority: `*`
 
 *TODO: Decide how this plugin should work or if we should even include this as a plugin.*
@@ -551,7 +558,7 @@ priority: `*`
 
 # Vizualizer Plugins
 
-## ☐ Oscilloscope
+## `Not Started Yet` Oscilloscope
 priority: `**`
 
 This should include controls for the input gain & the time window.
@@ -562,7 +569,7 @@ There should also be a button to freeze/unfreeze the display.
 
 
 
-## ☐ Spectrometer/Spectrogram
+## `Not Started Yet` Spectrometer/Spectrogram
 priority: `**`
 
 This should be able to switch between the "classic" style (like Voxengo Span) and the "FL-style" (like the spectrogram in Fruity Wavecandy).
@@ -574,7 +581,7 @@ This should be able to switch between the "classic" style (like Voxengo Span) an
 
 
 
-## ☐ Goniometer/Phase correlation meter
+## `Not Started Yet` Goniometer/Phase correlation meter
 priority: `**`
 
 This is used to measure the phase correlation of a stereo signal.
@@ -584,7 +591,7 @@ This is used to measure the phase correlation of a stereo signal.
 
 
 
-## ☐ Loudness meter
+## `Not Started Yet` Loudness meter
 priority: `*`
 
 This should be able to detect the loudness with different methods such as RMS and EBU.
@@ -596,7 +603,7 @@ This should be able to detect the loudness with different methods such as RMS an
 
 # Synth/Generator Plugins
 
-## ☐ Noise Generator
+## `Not Started Yet` Noise Generator
 priority: `*****`
 
 A simple noise generator that can generate white, pink, and brown noise.
@@ -605,7 +612,7 @@ This is mainly meant more as a "proof of concept" plugin since it is very easy t
 
 
 
-## ☐ Test Tone Generator
+## `Not Started Yet` Test Tone Generator
 priority: `*****`
 
 A simple sine wave generator that can smoothly sweep between 20Hz and 20KHz.
@@ -614,7 +621,7 @@ This is mainly meant more as a "proof of concept" plugin since it is very easy t
 
 
 
-## ☐ Sampler
+## `DSP WIP` Sampler
 priority: `****`
 
 This should be able to play a given sample when triggered by a MIDI note, and it should be able to repitch the sample based on the pitch of the MIDI note.
@@ -623,7 +630,7 @@ It should also include an AHDSR gain envelope, as well as an ADSR pitch envelope
 
 
 
-## ☐ Multi-sampler
+## `Not Started Yet` Multi-sampler
 priority: `**`
 
 This is used to play both soundfount (SF2) files and [`SFZ`](https://sfzformat.com) files.
@@ -638,7 +645,7 @@ The UI should at least show a keyboard display that shows the range of keys that
 
 
 
-## ☐ Simple "3xOSC"-like synth
+## `Not Started Yet` Simple "3xOSC"-like synth
 priority: `***`
 
 The main purpose of this is to quickly have some kind of basic built-in synth for Meadowlark. This will be heavily inspired by FL-studio's 3xOSC plugin.
@@ -667,7 +674,7 @@ This synth will include:
 Since this plugin is simple enough, we can probably focus on fitting it in an inline UI.
 
 
-## ☐ Drum Synth
+## `Not Started Yet` Drum Synth
 priority: `**`
 
 *(TODO: Decide how this should work)*
@@ -678,7 +685,7 @@ priority: `**`
 
 
 
-## ☐ Flagship subtractive synth
+## `Not Started Yet` Flagship subtractive synth
 priority: `*`
 
 *(TODO: Decide how this should work)*
@@ -691,7 +698,7 @@ I don't think it makes much sense to pack something this complex into a inline h
 
 
 
-## ☐ Simple FM Synth
+## `Not Started Yet` Simple FM Synth
 priority: `*`
 
 *(TODO: Decide how this should work)*
@@ -700,35 +707,35 @@ No real guidelines at the moment. I'm mostly just picturing a synth along the li
 
 
 
-## ☐ Flagship FM synth
+## `Not Started Yet` Flagship FM synth
 priority: `*`
 
 *(TODO: Decide how this should work or if this should even be included)*
 
 
 
-## ☐ Flagship wavetable synth
+## `Not Started Yet` Flagship wavetable synth
 priority: `*`
 
 *(TODO: Decide how this should work or if this should even be included, especially since most people will just use Vital anyway)*
 
 
 
-## ☐ Flagship additive synth
+## `Not Started Yet` Flagship additive synth
 priority: `*`
 
 *(TODO: Decide how this should work or if this should even be included)*
 
 
 
-## ☐ Flagship granular synth
+## `Not Started Yet` Flagship granular synth
 priority: `*`
 
 *(TODO: Decide how this should work or if this should even be included)*
 
 
 
-## ☐ Flagship modular synth
+## `Not Started Yet` Flagship modular synth
 priority: `*`
 
 *(TODO: Decide how this should work or if this should even be included)*
@@ -739,7 +746,7 @@ Basically I'm envisioning something like Bitwig's The Grid. That is a very lofty
 
 # MIDI/Note FX plugins
 
-## ☐ Note Transpose
+## `Not Started Yet` Note Transpose
 priority: `***`
 
 This will be a plugin that simply transposes notes by a given amount.
@@ -756,14 +763,14 @@ The controls should work just like Bitwig's Note Transpose plugin.
 
 
 
-## ☐ Arpeggiator
+## `Not Started Yet` Arpeggiator
 priority: `**`
 
 *(TODO: Decide how this should work)*
 
 
 
-## ☐ Note Expression Mapper
+## `Not Started Yet` Note Expression Mapper
 priority: `**`
 
 This uses a user-adjustable curve to map one of the targets:
@@ -779,7 +786,7 @@ In addition to the curve, there should be a "randomness" parameter that adds a r
 
 
 
-## ☐ Note Transpose Map
+## `Not Started Yet` Note Transpose Map
 priority: `**`
 
 This is used clamp all notes to fall within a certain scale. Useful for bad keyboard players like me :D.
@@ -790,7 +797,7 @@ For example, this is what Bitwig's Transpose Map plugin looks like. We can proba
 
 
 
-## ☐ Auto-Chord plugin
+## `Not Started Yet` Auto-Chord plugin
 priority: `*`
 
 This is used to automatically play chords in a given scale from a single note.
