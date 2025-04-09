@@ -1,21 +1,25 @@
 use arrayvec::ArrayVec;
-use std::f32::consts::PI;
+use std::f64::consts::PI;
 
-pub const DEFAULT_Q: f32 = Q_BUTTERWORTH_ORD2;
+pub const DEFAULT_Q: f32 = Q_BUTTERWORTH_ORD2 as f32;
 
-const Q_BUTTERWORTH_ORD2: f32 = 0.70710678118654752440;
-const Q_BUTTERWORTH_ORD4: [f32; 2] = [0.54119610014619698440, 1.3065629648763765279];
-const Q_BUTTERWORTH_ORD6: [f32; 3] = [
+const Q_BUTTERWORTH_ORD2: f64 = 0.70710678118654752440;
+const Q_BUTTERWORTH_ORD4: [f64; 2] = [0.54119610014619698440, 1.3065629648763765279];
+const Q_BUTTERWORTH_ORD6: [f64; 3] = [
     0.51763809020504152470,
     0.70710678118654752440,
     1.9318516525781365735,
 ];
-const Q_BUTTERWORTH_ORD8: [f32; 4] = [
+const Q_BUTTERWORTH_ORD8: [f64; 4] = [
     0.50979557910415916894,
     0.60134488693504528054,
     0.89997622313641570464,
     2.5629154477415061788,
 ];
+
+const ORD4_Q_SCALE: f64 = 0.35;
+const ORD6_Q_SCALE: f64 = 0.2;
+const ORD8_Q_SCALE: f64 = 0.14;
 
 const MAX_ONE_POLE_FILTERS: usize = 2;
 const MAX_SVF_FILTERS: usize = 8;
@@ -103,12 +107,12 @@ impl<const NUM_BANDS: usize> Default for EqParams<NUM_BANDS> {
         Self {
             lp_enabled: false,
             lp_cutoff_hz: 21_480.0,
-            lp_q: Q_BUTTERWORTH_ORD2,
+            lp_q: DEFAULT_Q,
             lp_order: FilterOrder::X2,
 
             hp_enabled: false,
             hp_cutoff_hz: 20.0,
-            hp_q: Q_BUTTERWORTH_ORD2,
+            hp_q: DEFAULT_Q,
             hp_order: FilterOrder::X2,
 
             bands: [BandParams::default(); NUM_BANDS],
@@ -126,12 +130,12 @@ pub struct MeadowEqDsp<const NUM_BANDS: usize> {
 
     has_first_order_filter: bool,
 
-    sample_rate_recip: f32,
+    sample_rate_recip: f64,
 }
 
 impl<const NUM_BANDS: usize> MeadowEqDsp<NUM_BANDS> {
     pub fn new(sample_rate: f64) -> Self {
-        let sample_rate_recip = sample_rate.recip() as f32;
+        let sample_rate_recip = sample_rate.recip();
 
         let params = EqParams::default();
 
@@ -154,28 +158,28 @@ impl<const NUM_BANDS: usize> MeadowEqDsp<NUM_BANDS> {
             if params.lp_enabled {
                 match params.lp_order {
                     FilterOrder::X1 => self.lp_band.set_ord1(OnePoleCoeff::lowpass(
-                        params.lp_cutoff_hz,
+                        params.lp_cutoff_hz as f64,
                         self.sample_rate_recip,
                     )),
                     FilterOrder::X2 => self.lp_band.set_ord2(SvfCoeff::lowpass_ord2(
-                        params.lp_cutoff_hz,
+                        params.lp_cutoff_hz as f64,
                         self.sample_rate_recip,
-                        params.lp_q,
+                        params.lp_q as f64,
                     )),
                     FilterOrder::X4 => self.lp_band.set_ord4(SvfCoeff::lowpass_ord4(
-                        params.lp_cutoff_hz,
+                        params.lp_cutoff_hz as f64,
                         self.sample_rate_recip,
-                        params.lp_q,
+                        params.lp_q as f64,
                     )),
                     FilterOrder::X6 => self.lp_band.set_ord6(SvfCoeff::lowpass_ord6(
-                        params.lp_cutoff_hz,
+                        params.lp_cutoff_hz as f64,
                         self.sample_rate_recip,
-                        params.lp_q,
+                        params.lp_q as f64,
                     )),
                     FilterOrder::X8 => self.lp_band.set_ord8(SvfCoeff::lowpass_ord8(
-                        params.lp_cutoff_hz,
+                        params.lp_cutoff_hz as f64,
                         self.sample_rate_recip,
-                        params.lp_q,
+                        params.lp_q as f64,
                     )),
                 }
             }
@@ -184,28 +188,28 @@ impl<const NUM_BANDS: usize> MeadowEqDsp<NUM_BANDS> {
             if params.hp_enabled {
                 match params.hp_order {
                     FilterOrder::X1 => self.hp_band.set_ord1(OnePoleCoeff::highpass(
-                        params.hp_cutoff_hz,
+                        params.hp_cutoff_hz as f64,
                         self.sample_rate_recip,
                     )),
                     FilterOrder::X2 => self.hp_band.set_ord2(SvfCoeff::highpass_ord2(
-                        params.hp_cutoff_hz,
+                        params.hp_cutoff_hz as f64,
                         self.sample_rate_recip,
-                        params.hp_q,
+                        params.hp_q as f64,
                     )),
                     FilterOrder::X4 => self.hp_band.set_ord4(SvfCoeff::highpass_ord4(
-                        params.hp_cutoff_hz,
+                        params.hp_cutoff_hz as f64,
                         self.sample_rate_recip,
-                        params.hp_q,
+                        params.hp_q as f64,
                     )),
                     FilterOrder::X6 => self.hp_band.set_ord6(SvfCoeff::highpass_ord6(
-                        params.hp_cutoff_hz,
+                        params.hp_cutoff_hz as f64,
                         self.sample_rate_recip,
-                        params.hp_q,
+                        params.hp_q as f64,
                     )),
                     FilterOrder::X8 => self.hp_band.set_ord8(SvfCoeff::highpass_ord8(
-                        params.hp_cutoff_hz,
+                        params.hp_cutoff_hz as f64,
                         self.sample_rate_recip,
-                        params.hp_q,
+                        params.hp_q as f64,
                     )),
                 }
             }
@@ -215,32 +219,32 @@ impl<const NUM_BANDS: usize> MeadowEqDsp<NUM_BANDS> {
                 if band_params.enabled {
                     match band_params.band_type {
                         BandType::Bell => band.set(SvfCoeff::bell(
-                            band_params.cutoff_hz,
+                            band_params.cutoff_hz as f64,
                             self.sample_rate_recip,
-                            band_params.q,
-                            band_params.gain_db,
+                            band_params.q as f64,
+                            band_params.gain_db as f64,
                         )),
                         BandType::LowShelf => band.set(SvfCoeff::low_shelf(
-                            band_params.cutoff_hz,
+                            band_params.cutoff_hz as f64,
                             self.sample_rate_recip,
-                            band_params.q,
-                            band_params.gain_db,
+                            band_params.q as f64,
+                            band_params.gain_db as f64,
                         )),
                         BandType::HighShelf => band.set(SvfCoeff::high_shelf(
-                            band_params.cutoff_hz,
+                            band_params.cutoff_hz as f64,
                             self.sample_rate_recip,
-                            band_params.q,
-                            band_params.gain_db,
+                            band_params.q as f64,
+                            band_params.gain_db as f64,
                         )),
                         BandType::Notch => band.set(SvfCoeff::notch(
-                            band_params.cutoff_hz,
+                            band_params.cutoff_hz as f64,
                             self.sample_rate_recip,
-                            band_params.q,
+                            band_params.q as f64,
                         )),
                         BandType::Allpass => band.set(SvfCoeff::allpass(
-                            band_params.cutoff_hz,
+                            band_params.cutoff_hz as f64,
                             self.sample_rate_recip,
-                            band_params.q,
+                            band_params.q as f64,
                         )),
                     }
                 }
@@ -349,19 +353,16 @@ struct SvfCoeff {
 }
 
 impl SvfCoeff {
-    fn lowpass_ord2(cutoff_hz: f32, sample_rate_recip: f32, q: f32) -> Self {
+    fn lowpass_ord2(cutoff_hz: f64, sample_rate_recip: f64, q: f64) -> Self {
         let g = g(cutoff_hz, sample_rate_recip);
         let k = 1.0 / q;
 
         Self::from_g_and_k(g, k, 0.0, 0.0, 1.0)
     }
 
-    fn lowpass_ord4(cutoff_hz: f32, sample_rate_recip: f32, q: f32) -> [Self; 2] {
+    fn lowpass_ord4(cutoff_hz: f64, sample_rate_recip: f64, q: f64) -> [Self; 2] {
         let g = g(cutoff_hz, sample_rate_recip);
-        let mut q_norm = q_norm(q);
-        if q_norm > 1.0 {
-            q_norm = 1.0 + ((q_norm - 1.0) * 0.35);
-        }
+        let q_norm = scale_q_norm_for_order(q_norm(q), ORD4_Q_SCALE);
 
         std::array::from_fn(|i| {
             let q = q_norm * Q_BUTTERWORTH_ORD4[i];
@@ -371,12 +372,9 @@ impl SvfCoeff {
         })
     }
 
-    fn lowpass_ord6(cutoff_hz: f32, sample_rate_recip: f32, q: f32) -> [Self; 3] {
+    fn lowpass_ord6(cutoff_hz: f64, sample_rate_recip: f64, q: f64) -> [Self; 3] {
         let g = g(cutoff_hz, sample_rate_recip);
-        let mut q_norm = q_norm(q);
-        if q_norm > 1.0 {
-            q_norm = 1.0 + ((q_norm - 1.0) * 0.2);
-        }
+        let q_norm = scale_q_norm_for_order(q_norm(q), ORD6_Q_SCALE);
 
         std::array::from_fn(|i| {
             let q = q_norm * Q_BUTTERWORTH_ORD6[i];
@@ -386,12 +384,9 @@ impl SvfCoeff {
         })
     }
 
-    fn lowpass_ord8(cutoff_hz: f32, sample_rate_recip: f32, q: f32) -> [Self; 4] {
+    fn lowpass_ord8(cutoff_hz: f64, sample_rate_recip: f64, q: f64) -> [Self; 4] {
         let g = g(cutoff_hz, sample_rate_recip);
-        let mut q_norm = q_norm(q);
-        if q_norm > 1.0 {
-            q_norm = 1.0 + ((q_norm - 1.0) * 0.14);
-        }
+        let q_norm = scale_q_norm_for_order(q_norm(q), ORD8_Q_SCALE);
 
         std::array::from_fn(|i| {
             let q = q_norm * Q_BUTTERWORTH_ORD8[i];
@@ -401,19 +396,16 @@ impl SvfCoeff {
         })
     }
 
-    fn highpass_ord2(cutoff_hz: f32, sample_rate_recip: f32, q: f32) -> Self {
+    fn highpass_ord2(cutoff_hz: f64, sample_rate_recip: f64, q: f64) -> Self {
         let g = g(cutoff_hz, sample_rate_recip);
         let k = 1.0 / q;
 
         Self::from_g_and_k(g, k, 1.0, -k, -1.0)
     }
 
-    fn highpass_ord4(cutoff_hz: f32, sample_rate_recip: f32, q: f32) -> [Self; 2] {
+    fn highpass_ord4(cutoff_hz: f64, sample_rate_recip: f64, q: f64) -> [Self; 2] {
         let g = g(cutoff_hz, sample_rate_recip);
-        let mut q_norm = q_norm(q);
-        if q_norm > 1.0 {
-            q_norm = 1.0 + ((q_norm - 1.0) * 0.35);
-        }
+        let q_norm = scale_q_norm_for_order(q_norm(q), ORD4_Q_SCALE);
 
         std::array::from_fn(|i| {
             let q = q_norm * Q_BUTTERWORTH_ORD4[i];
@@ -423,12 +415,9 @@ impl SvfCoeff {
         })
     }
 
-    fn highpass_ord6(cutoff_hz: f32, sample_rate_recip: f32, q: f32) -> [Self; 3] {
+    fn highpass_ord6(cutoff_hz: f64, sample_rate_recip: f64, q: f64) -> [Self; 3] {
         let g = g(cutoff_hz, sample_rate_recip);
-        let mut q_norm = q_norm(q);
-        if q_norm > 1.0 {
-            q_norm = 1.0 + ((q_norm - 1.0) * 0.2);
-        }
+        let q_norm = scale_q_norm_for_order(q_norm(q), ORD6_Q_SCALE);
 
         std::array::from_fn(|i| {
             let q = q_norm * Q_BUTTERWORTH_ORD6[i];
@@ -438,12 +427,9 @@ impl SvfCoeff {
         })
     }
 
-    fn highpass_ord8(cutoff_hz: f32, sample_rate_recip: f32, q: f32) -> [Self; 4] {
+    fn highpass_ord8(cutoff_hz: f64, sample_rate_recip: f64, q: f64) -> [Self; 4] {
         let g = g(cutoff_hz, sample_rate_recip);
-        let mut q_norm = q_norm(q);
-        if q_norm > 1.0 {
-            q_norm = 1.0 + ((q_norm - 1.0) * 0.14);
-        }
+        let q_norm = scale_q_norm_for_order(q_norm(q), ORD8_Q_SCALE);
 
         std::array::from_fn(|i| {
             let q = q_norm * Q_BUTTERWORTH_ORD8[i];
@@ -453,14 +439,14 @@ impl SvfCoeff {
         })
     }
 
-    fn notch(cutoff_hz: f32, sample_rate_recip: f32, q: f32) -> Self {
+    fn notch(cutoff_hz: f64, sample_rate_recip: f64, q: f64) -> Self {
         let g = g(cutoff_hz, sample_rate_recip);
         let k = 1.0 / q;
 
         Self::from_g_and_k(g, k, 1.0, -k, 0.0)
     }
 
-    fn bell(cutoff_hz: f32, sample_rate_recip: f32, q: f32, gain_db: f32) -> Self {
+    fn bell(cutoff_hz: f64, sample_rate_recip: f64, q: f64, gain_db: f64) -> Self {
         let a = gain_db_to_a(gain_db);
 
         let g = g(cutoff_hz, sample_rate_recip);
@@ -469,7 +455,7 @@ impl SvfCoeff {
         Self::from_g_and_k(g, k, 1.0, k * (a * a - 1.0), 0.0)
     }
 
-    fn low_shelf(cutoff_hz: f32, sample_rate_recip: f32, q: f32, gain_db: f32) -> Self {
+    fn low_shelf(cutoff_hz: f64, sample_rate_recip: f64, q: f64, gain_db: f64) -> Self {
         let a = gain_db_to_a(gain_db);
 
         let g = (PI * cutoff_hz * sample_rate_recip).tan() / a.sqrt();
@@ -478,7 +464,7 @@ impl SvfCoeff {
         Self::from_g_and_k(g, k, 1.0, k * (a - 1.0), a * a - 1.0)
     }
 
-    fn high_shelf(cutoff_hz: f32, sample_rate_recip: f32, q: f32, gain_db: f32) -> Self {
+    fn high_shelf(cutoff_hz: f64, sample_rate_recip: f64, q: f64, gain_db: f64) -> Self {
         let a = gain_db_to_a(gain_db);
 
         let g = (PI * cutoff_hz * sample_rate_recip).tan() / a.sqrt();
@@ -487,39 +473,47 @@ impl SvfCoeff {
         Self::from_g_and_k(g, k, a * a, k * (1.0 - a) * a, 1.0 - a * a)
     }
 
-    fn allpass(cutoff_hz: f32, sample_rate_recip: f32, q: f32) -> Self {
+    fn allpass(cutoff_hz: f64, sample_rate_recip: f64, q: f64) -> Self {
         let g = g(cutoff_hz, sample_rate_recip);
         let k = 1.0 / q;
 
         Self::from_g_and_k(g, k, 1.0, -2.0 * k, 0.0)
     }
 
-    fn from_g_and_k(g: f32, k: f32, m0: f32, m1: f32, m2: f32) -> Self {
+    fn from_g_and_k(g: f64, k: f64, m0: f64, m1: f64, m2: f64) -> Self {
         let a1 = 1.0 / (1.0 + g * (g + k));
         let a2 = g * a1;
         let a3 = g * a2;
 
         Self {
-            a1,
-            a2,
-            a3,
-            m0,
-            m1,
-            m2,
+            a1: a1 as f32,
+            a2: a2 as f32,
+            a3: a3 as f32,
+            m0: m0 as f32,
+            m1: m1 as f32,
+            m2: m2 as f32,
         }
     }
 }
 
-fn g(cutoff_hz: f32, sample_rate_recip: f32) -> f32 {
+fn g(cutoff_hz: f64, sample_rate_recip: f64) -> f64 {
     (PI * cutoff_hz * sample_rate_recip).tan()
 }
 
-fn q_norm(q: f32) -> f32 {
+fn q_norm(q: f64) -> f64 {
     q * (1.0 / Q_BUTTERWORTH_ORD2)
 }
 
-fn gain_db_to_a(gain_db: f32) -> f32 {
-    10.0f32.powf(gain_db.clamp(-30.0, 30.0) / 40.0)
+fn gain_db_to_a(gain_db: f64) -> f64 {
+    10.0f64.powf(gain_db.clamp(-30.0, 30.0) / 40.0)
+}
+
+fn scale_q_norm_for_order(q_norm: f64, scale: f64) -> f64 {
+    if q_norm > 1.0 {
+        1.0 + ((q_norm - 1.0) * scale)
+    } else {
+        q_norm
+    }
 }
 
 #[derive(Default, Clone, Copy)]
@@ -551,25 +545,25 @@ struct OnePoleCoeff {
 }
 
 impl OnePoleCoeff {
-    fn lowpass(cutoff_hz: f32, sample_rate_recip: f32) -> Self {
+    fn lowpass(cutoff_hz: f64, sample_rate_recip: f64) -> Self {
         let b1 = ((-2.0 * PI) * cutoff_hz * sample_rate_recip).exp();
         let a0 = 1.0 - b1;
 
         Self {
-            a0,
-            b1,
+            a0: a0 as f32,
+            b1: b1 as f32,
             m0: 0.0,
             m1: 1.0,
         }
     }
 
-    fn highpass(cutoff_hz: f32, sample_rate_recip: f32) -> Self {
+    fn highpass(cutoff_hz: f64, sample_rate_recip: f64) -> Self {
         let b1 = ((-2.0 * PI) * cutoff_hz * sample_rate_recip).exp();
         let a0 = 1.0 - b1;
 
         Self {
-            a0,
-            b1,
+            a0: a0 as f32,
+            b1: b1 as f32,
             m0: 1.0,
             m1: -1.0,
         }
