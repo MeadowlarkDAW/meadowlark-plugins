@@ -14,3 +14,10 @@ Cargo.lock
 
 /target
 parametric-eq/literature/Improved spectrum estimation from digitized time series on a logarithmic frequency axis.pdf
+
+
+# Added by cargo
+#
+# already existing elements were commented out
+
+#/target

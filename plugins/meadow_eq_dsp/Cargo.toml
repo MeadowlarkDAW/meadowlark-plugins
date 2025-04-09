@@ -1,0 +1,11 @@
+[package]
+name = "meadow_eq_dsp"
+version = "0.1.0"
+edition = "2024"
+
+[features]
+portable-simd = []
+
+[dependencies]
+thiserror = "2"
+arrayvec = "0.7"

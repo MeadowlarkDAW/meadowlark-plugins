@@ -1,3 +1,22 @@
+[package]
+name = "meadowlark-plugins"
+version = "0.1.0"
+edition = "2024"
+license = "GPL-3.0"
+publish = false
+
 [workspace]
 members = [
+    "xtask",
+    "plugins/meadow_eq_dsp",
+    "plugins/meadow_eq",
 ]
+
+[profile.release]
+lto = "thin"
+strip = "symbols"
+
+[profile.profiling]
+inherits = "release"
+debug = true
+strip = "none"
